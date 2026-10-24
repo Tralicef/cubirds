@@ -528,7 +528,8 @@
     let opp = Infinity;
     for (let q = 0; q < g.n; q++) if (q !== p) opp = Math.min(opp, progress(g.cols[q]));
     return [bucketOf(k, [1, 2, 3, 5]), ready, Math.min(gain, 2), bucketOf(before, [2, 3, 4]), bucketOf(opp, [2, 3]),
-      bucketOf(h[s] / SMALL[s], [0.5, 1.0]), bucketOf(sumArr(nh), [1, 4, 8])].join(',');
+      bucketOf(h[s] / SMALL[s], [0.5, 1.0]), bucketOf(sumArr(nh), [1, 4, 8]),
+      bucketOf(handValue(nh, col, AFINADO) - handValue(h, col, AFINADO), [-0.5, 0.5, 1.5, 3.0])].join(',');
   }
   // Elige la jugada de mayor valor en la tabla; robar y bandadas, como Afinado.
   function tablaAgent(model) {

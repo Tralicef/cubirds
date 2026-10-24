@@ -10,7 +10,7 @@ afterstate de mayor valor esperado. Robar y formar bandadas se deciden con
 las reglas de Afinado: lo que se aprende es la jugada principal.
 
 - Métodos tabulares (Parte I): el afterstate se discretiza en una clave chica
-  (ver `key`), ~6500 combinaciones posibles.
+  (ver `key`), ~32.000 combinaciones posibles (unas pocas miles aparecen).
 - Métodos aproximados (Parte II): se usan las características por jugada de
   cubirds/rl/features.py.
 
@@ -32,7 +32,7 @@ La misma clave está en web/engine.js (sbKeys).
 
 import random
 
-from cubirds.game.bots import Afinado, make_agent, progress
+from cubirds.game.bots import AFINADO, Afinado, hand_value, make_agent, progress
 from cubirds.game.engine import NS, SMALL, BIG, PLAY, Game, decode_play
 
 OPPONENTS = [("afinado", 0.35), ("coleccionista", 0.25), ("goloso", 0.25), ("azar", 0.15)]
@@ -82,6 +82,8 @@ def key(g, a, p=None):
         _bucket(opp, [2, 3]),                     # al mejor rival: 0-1, 2, 3+
         _bucket(h[s] / SMALL[s], [0.5, 1.0]),     # cartas que quema respecto de una bandada chica
         _bucket(sum(nh), [1, 4, 8]),              # mano después: 0 (ronda nueva), 1-3, 4-7, 8+
+        # cuánto mejora la mano según la evaluación de Afinado
+        _bucket(hand_value(nh, col, AFINADO) - hand_value(h, col, AFINADO), [-0.5, 0.5, 1.5, 3.0]),
     )
 
 

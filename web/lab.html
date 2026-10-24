@@ -287,8 +287,8 @@ const FEATURE_NAMES = [
 const TAKEN_LABEL = ['No se lleva nada', 'Se lleva 1', 'Se lleva 2', 'Se lleva 3–4', 'Se lleva 5 o más'];
 const READY_LABEL = ['sin bandada después', 'bandada chica', 'bandada grande'];
 const describeKey = k => {
-  const [taken, ready, gain, prog] = k.split(',').map(Number);
-  return `${TAKEN_LABEL[taken].toLowerCase()}, ${ready ? `después puede formar ${READY_LABEL[ready]}${gain ? ` que lo acerca ${gain}` : ' que no lo acerca'}` : 'sin bandada posible después'}, le faltan ${['0–1', '2', '3', '4+'][prog]} bandadas`;
+  const [taken, ready, gain, prog, , , , hv] = k.split(',').map(Number);
+  return `${TAKEN_LABEL[taken].toLowerCase()}, ${ready ? `después puede formar ${READY_LABEL[ready]}${gain ? ` que lo acerca ${gain}` : ' que no lo acerca'}` : 'sin bandada posible después'}, la mano ${['empeora', 'queda igual', 'mejora un poco', 'mejora', 'mejora mucho'][hv]}, le faltan ${['0–1', '2', '3', '4+'][prog]} bandadas`;
 };
 const describeAction = (a, hand) => { const [s, r, side] = E.decodePlay(a), k = hand[s]; return `${k} ${k === 1 ? SP[s] : PL[s]} a la ${side ? 'derecha' : 'izquierda'} de la fila ${r + 1}`; };
 const handText = h => h.map((k, s) => k ? `${AB[s]}×${k}` : '').filter(Boolean).join(' ') || '—';

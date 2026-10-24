@@ -27,12 +27,16 @@ distintas o 2 especies con 3 pájaros.
 - `cubirds/game/engine.py`: reglas. Cada turno son hasta tres decisiones (jugar, robar, bandada) en un único espacio de 75 acciones.
 - `cubirds/game/bots.py`: bots heurísticos.
 - `web/engine.js`: el mismo motor en JavaScript, con el mismo generador aleatorio. `tests/test_js_parity.py` comprueba que las partidas sean idénticas en los dos lenguajes.
-- `web/`: el sitio, publicado en https://cu-birds.vercel.app.
+- `web/`: el sitio, publicado en https://cu-birds.vercel.app:
+  - `index.html`: el juego, contra cualquier agente de la arena con su Elo.
+  - `arena.html`: torneos (ligas y eliminatorias), ranking Elo y simulación en el navegador.
+  - `lab.html` + `lab-worker.js`: 33 algoritmos aprendiendo en vivo, con curva, mapa de calor o pesos y una partida en cámara lenta.
 
 ## Bots
 
 - **Azar**, **Goloso** (se lleva la mayor cantidad de pájaros) y **Coleccionista** (puntúa su mano según qué tan cerca está de formar bandadas).
 - **Afinado**: Coleccionista con pesos encontrados por búsqueda aleatoria. Aprendió que conviene mucho más completar especies que ya tenés (camino a "2 especies con 3") que sumar especies nuevas.
+- **ISMCTS** (sólo en JS): árbol de jugadas propias con UCB sobre manos posibles de los rivales, 2 jugadas de profundidad.
 - **Experto**: Monte Carlo con determinización. Para las mejores jugadas según Afinado, reparte manos posibles a los rivales con las cartas ocultas, simula una vuelta de mesa y evalúa contra el mejor rival.
 
 ## Agentes que aprenden (`cubirds/rl`)
