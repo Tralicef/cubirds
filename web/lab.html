@@ -473,7 +473,7 @@ function weightBars(w, title) {
 
 function renderSlow(slow) {
   $('slowCard').hidden = false;
-  $('slowSummary').textContent = `${slow.won ? 'Ganó' : 'Perdió'} la partida (mesa de ${slow.n}, ${slow.turns} turnos en total). ` +
+  $('slowSummary').textContent = `${slow.won ? 'Ganó' : 'Perdió'} la partida (mesa de ${slow.n}, ${slow.gameTurns} turnos en total). ` +
     (state.alg === 'ismcts' ? 'No aprende: en cada jugada vuelve a simular desde cero. En cada candidata, cuántas simulaciones recibió y su valor promedio.'
       : state.alg === 'experto' ? 'No aprende: en cada jugada vuelve a imaginar manos desde cero. En cada candidata, su valor promedio en lo que imaginó.'
       : state.alg === 'exit' ? 'Juega el experto (la búsqueda); en cada candidata, cuántas simulaciones le dio. Mientras tanto el aprendiz se corrige para parecerse.'

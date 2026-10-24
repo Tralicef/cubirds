@@ -730,7 +730,7 @@ function playTrainingEpisode(record) {
   if (record && info) record[record.length - 1].update = info;
   if (traj.length) alg.endEpisode(traj);
   rounds++;
-  return { result: ep.result(), n: ep.n, won: ep.g.winners.includes(ep.me), turns: ep.g.turn };
+  return { result: ep.result(), n: ep.n, won: ep.g.winners.includes(ep.me), gameTurns: ep.g.turn };
 }
 
 function post(extra = {}) {
