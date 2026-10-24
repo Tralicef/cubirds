@@ -462,7 +462,39 @@
       },
     };
   }
-  const MODEL_KINDS = ['red'];
+  // ---------- Sutton & Barto tabular (cubirds/rl/sb/common.py: key) ----------
+  const bucketOf = (x, edges) => { let i = 0; while (i < edges.length && x >= edges[i]) i++; return i; };
+  function sbKey(g, a, p = g.cur) {
+    const h = g.hands[p], col = g.cols[p];
+    const [s, r, side] = decodePlay(a);
+    const row = g.rows[r], k = enclosed(row, s, side);
+    const taken = side === 0 ? row.slice(0, k) : row.slice(row.length - k);
+    const nh = h.slice(); nh[s] = 0;
+    for (const c of taken) nh[c]++;
+    let ready = 0, gain = 0;
+    const before = progress(col);
+    for (let t = 0; t < NS; t++) if (nh[t] >= SMALL[t]) {
+      const keep = nh[t] >= BIG[t] ? 2 : 1;
+      ready = Math.max(ready, keep);
+      const nc = col.slice(); nc[t] += keep;
+      gain = Math.max(gain, before - progress(nc));
+    }
+    let opp = Infinity;
+    for (let q = 0; q < g.n; q++) if (q !== p) opp = Math.min(opp, progress(g.cols[q]));
+    return [bucketOf(k, [1, 2, 3, 5]), ready, Math.min(gain, 2), bucketOf(before, [2, 3, 4]), bucketOf(opp, [2, 3]),
+      bucketOf(h[s] / SMALL[s], [0.5, 1.0]), bucketOf(sumArr(nh), [1, 4, 8])].join(',');
+  }
+  // Elige la jugada de mayor valor en la tabla; robar y bandadas, como Afinado.
+  function tablaAgent(model) {
+    const V = model.values, def = model.default;
+    return bot(g => {
+      const legal = g.legalActions();
+      let best = 0, bv = -Infinity;
+      legal.forEach((a, i) => { const v = V[sbKey(g, a)] ?? def; if (v > bv) { bv = v; best = i; } });
+      return legal[best];
+    });
+  }
+  const MODEL_KINDS = ['red', 'tabla'];
   // En Node: lee web/arena/models (index.json + archivos) y le pega a cada modelo su ficha.
   function loadModels(dir) {
     const fs = require('fs'), path = require('path');
@@ -495,10 +527,10 @@
   function makeAgent(spec, models) {
     const [kind, arg] = spec.split(/:(.*)/s);
     if (kind === 'experto') return arg ? experto(...arg.split(':').map(Number)) : experto();
-    if (kind === 'red') {
+    if (MODEL_KINDS.includes(kind)) {
       const m = models && models[arg];
       if (!m) throw new Error(`Falta el modelo ${arg}`);
-      return netAgent(m);
+      return kind === 'tabla' ? tablaAgent(m) : netAgent(m);
     }
     if (H[kind]) return H[kind];
     throw new Error(`Agente desconocido: ${spec}`);
@@ -704,7 +736,7 @@
   const api = {
     SPECIES, COUNTS, SMALL, BIG, NS, NROWS, HAND, A_NODRAW, A_DRAW, A_FLOCK0, A_NOFLOCK, NACTIONS, MAX_TABLE,
     playAction, decodePlay, makeRng, hasWon, enclosed, takenBy, Game, progress, handValue, flockChoice, H, DEFAULT, AFINADO, coleccionistaScores, ranked, determinize, experto, evaluate, EXPERTO_W,
-    G_DIM, A_DIM, DIM, globalFeatures, actionFeatures, decision, netLogit, netValue, netAgent, modelKinds: MODEL_KINDS, loadModels,
+    G_DIM, A_DIM, DIM, globalFeatures, actionFeatures, decision, netLogit, netValue, netAgent, sbKey, tablaAgent, modelKinds: MODEL_KINDS, loadModels,
     CATALOG, describe, makeAgent, playGame, eloUpdate, ELO_INITIAL, ELO_K, tournament, knockout, randomPlan,
   };
   root.CuBirdsEngine = api;

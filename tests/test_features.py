@@ -65,3 +65,30 @@ const [legal, X] = E.decision(g);
 console.log(JSON.stringify(X.map(x => E.netLogit(m.params, x))));
 """, str(path)], cwd=ROOT, capture_output=True, text=True, check=True).stdout)
     np.testing.assert_allclose(py, js, atol=1e-4)
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="hace falta node")
+def test_sb_keys_match_js():
+    from cubirds.rl.sb.common import key, key_str
+    js = json.loads(subprocess.run(["node", "-e", """
+const E = require('./web/engine.js');
+const out = [];
+for (const [seed, n] of [[4, 2], [9, 3], [15, 5]]) {
+  const g = new E.Game(n, seed), bot = E.makeAgent('coleccionista');
+  for (let i = 0; i < 90 && !g.done; i++) {
+    if (g.phase === 'play') out.push(g.legalActions().map(a => E.sbKey(g, a)));
+    g.step(bot.act(g, g.rng));
+  }
+}
+console.log(JSON.stringify(out));
+"""], cwd=ROOT, capture_output=True, text=True, check=True).stdout)
+    out = []
+    for seed, n in [(4, 2), (9, 3), (15, 5)]:
+        g, bot = Game(n, seed), make_agent("coleccionista")
+        for _ in range(90):
+            if g.done:
+                break
+            if g.phase == "play":
+                out.append([key_str(key(g, a)) for a in g.legal_actions()])
+            g.step(bot.act(g, g.rng))
+    assert out == js
