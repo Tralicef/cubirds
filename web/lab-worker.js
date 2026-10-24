@@ -9,11 +9,10 @@
  * características vienen de engine.js, así que coinciden con las de Python.
  * El agente decide la jugada; robar y formar bandadas lo hace como Afinado.
  *
- * Recompensa: 1 al ganar la partida y, con shaping, entre una jugada y la
- * siguiente el cambio de Φ = 0,1·pájaros − 0,1·bandadas que faltan. Los métodos
- * tabulares que miran hasta el final aprenden sin shaping (la probabilidad de
- * ganar): con shaping, el Φ del estado previo, que la clave no ve, ensucia el
- * valor de cada clave (ver cubirds/rl/sb/common.py).
+ * Recompensa: 1 al ganar la partida y, entre una jugada y la siguiente, el
+ * cambio de Φ = 0,1·pájaros − 0,1·bandadas que faltan (shaping por potencial).
+ * En los tabulares que miran hasta el final, el Φ del estado previo, que la
+ * clave no ve, ensucia el valor de cada clave (ver cubirds/rl/sb/common.py).
  */
 importScripts('engine.js');
 const E = self.CuBirdsEngine;
@@ -224,7 +223,7 @@ function Tabular(hp, rng, kind) {
   }
 
   return {
-    type: 'tabla', shaping: ['bandido', 'ucb', 'optimista'].includes(kind),
+    type: 'tabla',
     act(ep) { const ks = ep.keys(); t++; return { ks, g: greedy(ks), ...explore(ks) }; },
     greedyIndex(ep) { return greedy(ep.keys()); },
     update, endEpisode, q, N: k => N.get(k) || 0,

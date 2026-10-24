@@ -18,16 +18,17 @@ Recompensa: 1 al ganar (repartido si hay empate) y, con shaping, entre una
 decisión y la siguiente el cambio del potencial Φ = 0,1·pájaros − 0,1·bandadas
 que faltan (Ng et al., con Φ = 0 al terminar, que no cambia la política óptima).
 
-Ojo con el shaping en los métodos tabulares episódicos: el retorno desde una
-jugada queda R − Φ(estado antes de jugar), y ese Φ no depende de la jugada pero
-sí del estado, que la clave no ve entera; mezclado en el valor de cada clave
-la confunde (por ejemplo, "no se lleva nada" parece mejor porque es más común
-al principio, cuando Φ es bajo). Por eso esos métodos aprenden sin shaping
-(directamente la probabilidad de ganar); los bandidos sí lo usan, porque para
-ellos es la ganancia inmediata, y los aproximados también, porque sus
+Ojo con el shaping en los métodos tabulares que miran hasta el final: el
+retorno desde una jugada queda R − Φ(estado antes de jugar), y ese Φ no depende
+de la jugada pero sí del estado, que la clave no ve entera; mezclado en el
+valor de cada clave la confunde (por ejemplo, "no se lleva nada" parece mejor
+porque es más común al principio, cuando Φ es bajo). Sin shaping es peor: la
+probabilidad de ganar cambia apenas unos puntos entre una jugada y otra del
+mismo turno y, con 10.000 partidas, el ruido de cada clave es mayor que esa
+diferencia. Los métodos aproximados no sufren el sesgo, porque sus
 características incluyen el estado y pueden descontar ese término.
 
-La misma clave está en web/engine.js (sbKeys).
+La misma clave está en web/engine.js (sbKey).
 """
 
 import random

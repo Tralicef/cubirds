@@ -1,0 +1,101 @@
+[
+ {
+  "id": "sb_mc_gradiente",
+  "file": "sb_mc_gradiente.json",
+  "kind": "lineal",
+  "label": "Monte Carlo por gradiente (lineal) (S&B 9.3)",
+  "family": "sb",
+  "chapter": "9.3",
+  "desc": "Ajusta v̂ al retorno real hasta el final de la partida con descenso de gradiente estocástico."
+ },
+ {
+  "id": "sb_lstd",
+  "file": "sb_lstd.json",
+  "kind": "lineal",
+  "label": "LSTD (S&B 9.8)",
+  "family": "sb",
+  "chapter": "9.8",
+  "desc": "TD por mínimos cuadrados: junta todas las transiciones y resuelve los pesos de una vez (sin paso α)."
+ },
+ {
+  "id": "sb_sarsa_semigradiente",
+  "file": "sb_sarsa_semigradiente.json",
+  "kind": "lineal",
+  "label": "SARSA semi-gradiente (lineal) (S&B 10.1)",
+  "family": "sb",
+  "chapter": "10.1",
+  "desc": "SARSA con v̂ lineal: target = r + v̂(afterstate siguiente elegido)."
+ },
+ {
+  "id": "sb_sarsa_semigradiente_n",
+  "file": "sb_sarsa_semigradiente_n.json",
+  "kind": "lineal",
+  "label": "SARSA semi-gradiente de n pasos (S&B 10.2)",
+  "family": "sb",
+  "chapter": "10.2",
+  "desc": "Recompensas de n turnos reales más v̂ del afterstate n turnos después (n = 3)."
+ },
+ {
+  "id": "sb_true_online_sarsa_lambda",
+  "file": "sb_true_online_sarsa_lambda.json",
+  "kind": "lineal",
+  "label": "True online SARSA(λ) (S&B 12.8)",
+  "family": "sb",
+  "chapter": "12.8",
+  "desc": "SARSA(λ) lineal con trazas holandesas: equivale exactamente a la versión 'hacia adelante' de λ-retornos."
+ },
+ {
+  "id": "sb_q_semigradiente",
+  "file": "sb_q_semigradiente.json",
+  "kind": "lineal",
+  "label": "Q-learning semi-gradiente (lineal) (S&B 11.1)",
+  "family": "sb",
+  "chapter": "11.1",
+  "desc": "Off-policy con aproximación: target = r + máx v̂ del turno siguiente (la 'tríada mortal' del cap. 11)."
+ },
+ {
+  "id": "sb_reinforce",
+  "file": "sb_reinforce.json",
+  "kind": "lineal",
+  "label": "REINFORCE (S&B 13.3)",
+  "family": "sb",
+  "chapter": "13.3",
+  "desc": "Gradiente de política Monte Carlo: sube la probabilidad de las jugadas según el retorno de la partida."
+ },
+ {
+  "id": "sb_reinforce_baseline",
+  "file": "sb_reinforce_baseline.json",
+  "kind": "lineal",
+  "label": "REINFORCE con línea de base (S&B 13.4)",
+  "family": "sb",
+  "chapter": "13.4",
+  "desc": "REINFORCE restando una estimación del valor del estado, lo que reduce mucho la varianza."
+ },
+ {
+  "id": "sb_actor_critico",
+  "file": "sb_actor_critico.json",
+  "kind": "lineal",
+  "label": "Actor-crítico de un paso (S&B 13.5)",
+  "family": "sb",
+  "chapter": "13.5",
+  "desc": "El crítico (TD) evalúa cada jugada en el momento y el actor ajusta la política con ese error."
+ },
+ {
+  "id": "sb_actor_critico_trazas",
+  "file": "sb_actor_critico_trazas.json",
+  "kind": "lineal",
+  "label": "Actor-crítico con trazas (S&B 13.5b)",
+  "family": "sb",
+  "chapter": "13.5b",
+  "desc": "Actor-crítico con trazas de elegibilidad en el actor y en el crítico (λ = 0,8)."
+ },
+ {
+  "id": "sb_td_gammon",
+  "file": "sb_td_gammon.json",
+  "kind": "valor",
+  "label": "TD-Gammon (red + TD(λ) + self-play) (S&B 16.1)",
+  "family": "sb",
+  "chapter": "16.1",
+  "desc": "Red que valúa afterstates, entrenada con TD(λ) y trazas sobre sus pesos, jugando contra copias de sí misma."
+ }
+]

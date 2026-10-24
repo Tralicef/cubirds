@@ -15,7 +15,7 @@ class Tabular:
     chapter = ""
     label = ""
     desc = ""
-    shaping = True  # los bandidos aprenden la ganancia inmediata (ver common.py)
+    shaping = True  # ver en common.py por qué todos usan shaping
 
     def __init__(self, rng, **hp):
         self.rng = rng
@@ -147,12 +147,11 @@ class GradientBandit(Tabular):
 
 
 # ============ Capítulos 5-8 y 12: retorno hasta el final de la partida ============
-# V(k) = probabilidad de ganar desde el afterstate k (sin shaping: la única
-# recompensa es la del final). La política greedy elige el mayor V.
+# V(k) = recompensa esperada desde el afterstate k hasta que termina la partida
+# (incluida la de este turno). La política greedy elige el mayor V.
 
 class Episodic(Tabular):
     """Juega la partida y guarda la trayectoria: opciones, índice elegido y recompensa."""
-    shaping = False  # V(clave) = probabilidad de ganar (ver common.py)
 
     def play(self, ep):
         traj = []
