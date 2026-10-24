@@ -97,5 +97,165 @@
   "family": "sb",
   "chapter": "16.1",
   "desc": "Red que valúa afterstates, entrenada con TD(λ) y trazas sobre sus pesos, jugando contra copias de sí misma."
+ },
+ {
+  "id": "ppo",
+  "file": "ppo.json",
+  "kind": "red",
+  "label": "PPO",
+  "family": "rl",
+  "desc": "PPO por jugada: una red puntúa cada acción legal (jugar, robar, bandada) a partir del estado y de cómo quedaría la mano; 77.000 partidas contra bots y copias de sí misma, con shaping por potencial."
+ },
+ {
+  "id": "sb_epsilon_greedy",
+  "file": "sb_epsilon_greedy.json",
+  "kind": "tabla",
+  "label": "ε-greedy (promedios) (S&B 2.2–2.4)",
+  "family": "sb",
+  "chapter": "2.2–2.4",
+  "desc": "Bandido ε-greedy con promedios muestrales incrementales (2.4): aprende la ganancia inmediata de cada afterstate."
+ },
+ {
+  "id": "sb_optimista",
+  "file": "sb_optimista.json",
+  "kind": "tabla",
+  "label": "Valores iniciales optimistas (S&B 2.6)",
+  "family": "sb",
+  "chapter": "2.6",
+  "desc": "Greedy puro con valor inicial alto (0,5, optimista) y paso constante: explora porque lo desconocido parece bueno."
+ },
+ {
+  "id": "sb_ucb",
+  "file": "sb_ucb.json",
+  "kind": "tabla",
+  "label": "UCB (S&B 2.7)",
+  "family": "sb",
+  "chapter": "2.7",
+  "desc": "Upper Confidence Bound: prefiere afterstates poco probados (bono c·√(ln t / N))."
+ },
+ {
+  "id": "sb_gradiente_bandido",
+  "file": "sb_gradiente_bandido.json",
+  "kind": "tabla",
+  "label": "Bandido por gradiente (S&B 2.8)",
+  "family": "sb",
+  "chapter": "2.8",
+  "desc": "Preferencias H con softmax y línea de base (promedio de recompensas); no estima valores."
+ },
+ {
+  "id": "sb_mc_on_policy",
+  "file": "sb_mc_on_policy.json",
+  "kind": "tabla",
+  "label": "Monte Carlo on-policy (ε-soft) (S&B 5.4)",
+  "family": "sb",
+  "chapter": "5.4",
+  "desc": "Promedia el retorno real hasta el final de la partida de cada afterstate visitado (every-visit)."
+ },
+ {
+  "id": "sb_mc_off_policy",
+  "file": "sb_mc_off_policy.json",
+  "kind": "tabla",
+  "label": "Monte Carlo off-policy (IS ponderado) (S&B 5.7)",
+  "family": "sb",
+  "chapter": "5.7",
+  "desc": "Aprende la política greedy a partir de jugadas ε-greedy, corrigiendo con importance sampling ponderado."
+ },
+ {
+  "id": "sb_sarsa",
+  "file": "sb_sarsa.json",
+  "kind": "tabla",
+  "label": "SARSA (S&B 6.4)",
+  "family": "sb",
+  "chapter": "6.4",
+  "desc": "TD on-policy: V(k) ← V(k) + α[r + V(k siguiente elegido) − V(k)]."
+ },
+ {
+  "id": "sb_q_learning",
+  "file": "sb_q_learning.json",
+  "kind": "tabla",
+  "label": "Q-learning (S&B 6.5)",
+  "family": "sb",
+  "chapter": "6.5",
+  "desc": "TD off-policy: usa el mejor afterstate del turno siguiente, juegue el que juegue."
+ },
+ {
+  "id": "sb_expected_sarsa",
+  "file": "sb_expected_sarsa.json",
+  "kind": "tabla",
+  "label": "Expected SARSA (S&B 6.6)",
+  "family": "sb",
+  "chapter": "6.6",
+  "desc": "TD con el valor esperado del turno siguiente según la política ε-greedy."
+ },
+ {
+  "id": "sb_double_q",
+  "file": "sb_double_q.json",
+  "kind": "tabla",
+  "label": "Double Q-learning (S&B 6.7)",
+  "family": "sb",
+  "chapter": "6.7",
+  "desc": "Dos tablas: una elige el mejor afterstate y la otra lo valúa, para evitar el sesgo de maximización."
+ },
+ {
+  "id": "sb_sarsa_n",
+  "file": "sb_sarsa_n.json",
+  "kind": "tabla",
+  "label": "SARSA de n pasos (S&B 7.2)",
+  "family": "sb",
+  "chapter": "7.2",
+  "desc": "Suma las recompensas de n turnos reales y completa con V del afterstate n turnos después (n = 3)."
+ },
+ {
+  "id": "sb_tree_backup",
+  "file": "sb_tree_backup.json",
+  "kind": "tabla",
+  "label": "Tree backup de n pasos (S&B 7.5)",
+  "family": "sb",
+  "chapter": "7.5",
+  "desc": "n pasos off-policy sin importance sampling: en cada paso mezcla lo jugado con el valor de la jugada greedy."
+ },
+ {
+  "id": "sb_dyna_q",
+  "file": "sb_dyna_q.json",
+  "kind": "tabla",
+  "label": "Dyna-Q (S&B 8.2)",
+  "family": "sb",
+  "chapter": "8.2",
+  "desc": "Q-learning más planificación: repasa transiciones guardadas en un modelo aprendido (n repasos por paso)."
+ },
+ {
+  "id": "sb_prioritized_sweeping",
+  "file": "sb_prioritized_sweeping.json",
+  "kind": "tabla",
+  "label": "Prioritized sweeping (S&B 8.4)",
+  "family": "sb",
+  "chapter": "8.4",
+  "desc": "Dyna que repasa primero los afterstates cuyo valor cambió más y propaga hacia sus predecesores."
+ },
+ {
+  "id": "sb_sarsa_lambda",
+  "file": "sb_sarsa_lambda.json",
+  "kind": "tabla",
+  "label": "SARSA(λ) tabular (S&B 12.7)",
+  "family": "sb",
+  "chapter": "12.7",
+  "desc": "SARSA con trazas de elegibilidad (reemplazo): el error de cada turno corrige también a los anteriores."
+ },
+ {
+  "id": "sb_q_lambda",
+  "file": "sb_q_lambda.json",
+  "kind": "tabla",
+  "label": "Q(λ) de Watkins (S&B 12.10)",
+  "family": "sb",
+  "chapter": "12.10",
+  "desc": "Q-learning con trazas: las trazas se cortan cuando la jugada no fue la greedy."
+ },
+ {
+  "id": "evolutiva",
+  "file": "evolutiva.json",
+  "kind": "red",
+  "label": "Evolutiva",
+  "family": "rl",
+  "desc": "La misma red por jugada que PPO, entrenada sin gradientes con estrategias evolutivas: perturba los pesos, juega y se mueve hacia las perturbaciones que ganaron más."
  }
 ]
