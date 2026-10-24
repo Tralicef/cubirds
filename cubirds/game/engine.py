@@ -105,6 +105,27 @@ class Game:
         self.winners = []
         self.log = []  # eventos de la partida, para la interfaz y los tests
 
+    @classmethod
+    def from_state(cls, d):
+        """Estado compacto (como lo escribe tools/az_selfplay.js) -> partida con lo necesario para
+        las acciones legales y las características; el mazo sólo conserva su tamaño."""
+        g = cls.__new__(cls)
+        g.n = d["n"]
+        g.rng = Rng(1)
+        g.deck = [0] * d["deck"]
+        g.discard = []
+        g.rows = [list(r) for r in d["rows"]]
+        g.hands = [list(h) for h in d["hands"]]
+        g.cols = [list(c) for c in d["cols"]]
+        g.cur = d["cur"]
+        g.phase = d["phase"]
+        g.turn = 0
+        g.round = 1
+        g.done = False
+        g.winners = []
+        g.log = []
+        return g
+
     def clone(self):
         g = Game.__new__(Game)
         g.__dict__.update(self.__dict__)

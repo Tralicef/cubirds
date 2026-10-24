@@ -449,7 +449,8 @@
     x[30 + (g.phase === 'play' ? 0 : g.phase === 'draw' ? 1 : 2)] = 1;
     return x;
   }
-  function actionFeatures(g, a, p = g.cur) {
+  // ctx (opcional): valores de la mano actual ya calculados, para no repetirlos en cada acción.
+  function actionFeatures(g, a, p = g.cur, ctx = null) {
     const h = g.hands[p], col = g.cols[p], x = new Float64Array(A_DIM);
     if (a < 64) {
       const [s, r, side] = decodePlay(a);
@@ -462,8 +463,8 @@
       let ns = 0, nb = 0;
       for (let t = 0; t < NS; t++) { if (nh[t] >= SMALL[t]) ns++; if (nh[t] >= BIG[t]) nb++; }
       x[19] = ns / 3; x[20] = nb / 2;
-      x[21] = (handValue(nh, col, DEFAULT) - handValue(h, col, DEFAULT)) / 3;
-      x[22] = (handValue(nh, col, AFINADO) - handValue(h, col, AFINADO)) / 5;
+      x[21] = (handValue(nh, col, DEFAULT) - (ctx ? ctx.hvD : handValue(h, col, DEFAULT))) / 3;
+      x[22] = (handValue(nh, col, AFINADO) - (ctx ? ctx.hvA : handValue(h, col, AFINADO))) / 5;
       x[23] = k === 0 ? 1 : 0;
       x[24] = (row.length - k + h[s]) / 10;
     } else if (a === A_DRAW) x[25] = 1;
@@ -478,10 +479,11 @@
     }
     return x;
   }
+  const handCtx = (g, p = g.cur) => ({ hvD: handValue(g.hands[p], g.cols[p], DEFAULT), hvA: handValue(g.hands[p], g.cols[p], AFINADO) });
   // [acciones legales, filas de DIM valores] para el jugador de turno.
   function decision(g) {
-    const legal = g.legalActions(), gx = globalFeatures(g);
-    return [legal, legal.map(a => { const row = new Float64Array(DIM); row.set(gx); row.set(actionFeatures(g, a), G_DIM); return row; })];
+    const legal = g.legalActions(), gx = globalFeatures(g), ctx = handCtx(g);
+    return [legal, legal.map(a => { const row = new Float64Array(DIM); row.set(gx); row.set(actionFeatures(g, a, g.cur, ctx), G_DIM); return row; })];
   }
 
   // ---------- redes entrenadas (cubirds/rl/ppo.py) ----------
@@ -565,6 +567,142 @@
       return legal[best];
     });
   }
+  // ---------- AlphaZero (cubirds/rl/alphazero.py) ----------
+  // Misma red que PPO: la política puntúa cada acción legal (prior de la búsqueda) y el
+  // valor estima la probabilidad de ganar desde el estado global de cada jugador.
+  // Búsqueda: en cada simulación se reparten manos posibles con las cartas que no ve el
+  // que piensa (información imperfecta) y se baja por un árbol donde juegan todos; cada
+  // nodo guarda el valor de cada jugador y elige con PUCT según el valor del que juega
+  // (max^n). Las hojas se evalúan con la red, sin simulaciones hasta el final.
+  const PREP = new WeakMap();
+  function prepNet(model) {
+    if (PREP.has(model)) return PREP.get(model);
+    const P = model.params || model, flat = W => Float64Array.from(W.flat());
+    const net = {
+      W1: flat(P.W1), b1: Float64Array.from(P.b1), W2: flat(P.W2), b2: Float64Array.from(P.b2), W3: Float64Array.from(P.W3.map(r => r[0])), b3: P.b3[0],
+      V1: flat(P.V1), c1: Float64Array.from(P.c1), V2: Float64Array.from(P.V2.map(r => r[0])), c2: P.c2[0],
+    };
+    net.h = net.b1.length;
+    // W2 transpuesta: cada neurona de la segunda capa lee una fila contigua
+    net.W2T = new Float64Array(net.h * net.h);
+    for (let i = 0; i < net.h; i++) for (let j = 0; j < net.h; j++) net.W2T[j * net.h + i] = net.W2[i * net.h + j];
+    PREP.set(model, net);
+    return net;
+  }
+  // tanh aproximada (Padé 7/6, error < 1e-4): la mitad de costo que Math.tanh, alcanza para la búsqueda
+  const ftanh = x => { if (x > 4.97) return 1; if (x < -4.97) return -1; const x2 = x * x; return x * (135135 + x2 * (17325 + x2 * (378 + x2))) / (135135 + x2 * (62370 + x2 * (3150 + x2 * 28))); };
+  // capa densa con entrada rala: muchas características valen 0
+  function denseTanh(x, W, b, h) {
+    const out = Float64Array.from(b);
+    for (let i = 0; i < x.length; i++) { const xi = x[i]; if (xi === 0) continue; const o = i * h; for (let j = 0; j < h; j++) out[j] += xi * W[o + j]; }
+    for (let j = 0; j < h; j++) out[j] = ftanh(out[j]);
+    return out;
+  }
+  function fastLogit(net, x) {
+    const h1 = denseTanh(x, net.W1, net.b1, net.h), h2 = denseTanh(h1, net.W2, net.b2, net.h);
+    let z = net.b3; for (let j = 0; j < net.h; j++) z += h2[j] * net.W3[j];
+    return z;
+  }
+  function fastValue(net, gx) {
+    const h = denseTanh(gx, net.V1, net.c1, net.h);
+    let z = net.c2; for (let j = 0; j < net.h; j++) z += h[j] * net.V2[j];
+    return z;
+  }
+  // Logits de todas las acciones legales: la parte global de la primera capa se calcula una vez.
+  function priors(net, g) {
+    const legal = g.legalActions(), h = net.h, G = G_DIM;
+    const W1 = net.W1, W2T = net.W2T, b2 = net.b2, W3 = net.W3;
+    const gx = globalFeatures(g), ctx = handCtx(g);
+    const base = Float64Array.from(net.b1);
+    for (let i = 0; i < G; i++) { const xi = gx[i]; if (xi === 0) continue; const o = i * h; for (let j = 0; j < h; j++) base[j] += xi * W1[o + j]; }
+    const h1 = new Float64Array(h), z = new Array(legal.length);
+    for (let k = 0; k < legal.length; k++) {
+      const ax = actionFeatures(g, legal[k], g.cur, ctx);
+      for (let j = 0; j < h; j++) h1[j] = base[j];
+      for (let i = 0; i < A_DIM; i++) { const xi = ax[i]; if (xi === 0) continue; const o = (G + i) * h; for (let j = 0; j < h; j++) h1[j] += xi * W1[o + j]; }
+      for (let j = 0; j < h; j++) h1[j] = ftanh(h1[j]);
+      let out = net.b3;
+      for (let j2 = 0; j2 < h; j2++) {
+        let a2 = b2[j2];
+        const o = j2 * h;
+        for (let j = 0; j < h; j++) a2 += h1[j] * W2T[o + j];
+        out += ftanh(a2) * W3[j2];
+      }
+      z[k] = out;
+    }
+    let m = -Infinity; for (const v of z) if (v > m) m = v;
+    const e = z.map(v => Math.exp(v - m)), s = sumArr(e);
+    return [legal, e.map(v => v / s)];
+  }
+  // Probabilidad de ganar de cada jugador según la red (normalizada para que sume 1).
+  function netValues(net, g) {
+    const v = []; let s = 0;
+    for (let p = 0; p < g.n; p++) { const x = Math.min(1, Math.max(0.001, fastValue(net, globalFeatures(g, p)))); v.push(x); s += x; }
+    return v.map(x => x / s);
+  }
+  const outcome = g => Array.from({ length: g.n }, (_, p) => g.winners.includes(p) ? 1 / g.winners.length : 0);
+  function gamma(rng, a) { // Marsaglia-Tsang (con el truco para a < 1)
+    if (a < 1) return gamma(rng, a + 1) * Math.pow(rng(), 1 / a);
+    const d = a - 1 / 3, c = 1 / Math.sqrt(9 * d);
+    for (;;) {
+      let x, v;
+      do { const u1 = rng() || 1e-12, u2 = rng(); x = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2); v = 1 + c * x; } while (v <= 0);
+      v = v * v * v; const u = rng();
+      if (u < 1 - 0.0331 * x ** 4 || Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+    }
+  }
+  // Devuelve {legal, visits, value}: visitas de cada acción legal de la raíz y el valor estimado del que juega.
+  function azSearch(model, g, iterations, rng, opts = {}) {
+    const net = prepNet(model), cpuct = opts.cpuct ?? 1.5, me = g.cur;
+    const node = () => ({ n: 0, w: new Float64Array(g.n), kids: new Map() });
+    const root = node();
+    const [rootLegal, rootP] = priors(net, g);
+    let P0 = rootP;
+    if (opts.noise) { const d = rootP.map(() => gamma(rng, opts.alpha ?? 0.3)), s = sumArr(d); P0 = rootP.map((p, i) => 0.75 * p + 0.25 * d[i] / s); }
+    rootLegal.forEach((a, i) => root.kids.set(a, Object.assign(node(), { p: P0[i], avail: 0 })));
+    root.ready = true;
+    for (let it = 0; it < iterations; it++) {
+      const sim = determinize(g, me, rng), path = [];
+      let cur = root, values = null;
+      for (;;) {
+        if (sim.done) { values = outcome(sim); break; }
+        const legal = sim.legalActions();
+        if (legal.length === 1) { sim.step(legal[0]); continue; }
+        if (!cur.ready || legal.some(a => !cur.kids.has(a))) {
+          const [, pr] = priors(net, sim);
+          legal.forEach((a, i) => { if (!cur.kids.has(a)) cur.kids.set(a, Object.assign(node(), { p: pr[i], avail: 0 })); });
+          if (!cur.ready) { cur.ready = true; values = netValues(net, sim); break; }
+        }
+        const q = sim.cur;
+        let best = null, bu = -Infinity;
+        for (const a of legal) {
+          const k = cur.kids.get(a);
+          k.avail++;
+          const u = (k.n ? k.w[q] / k.n : 0.3) + cpuct * k.p * Math.sqrt(k.avail) / (1 + k.n);
+          if (u > bu) { bu = u; best = a; }
+        }
+        cur = cur.kids.get(best);
+        path.push(cur);
+        sim.step(best);
+      }
+      root.n++;
+      for (let p = 0; p < g.n; p++) root.w[p] += values[p];
+      for (const k of path) { k.n++; for (let p = 0; p < g.n; p++) k.w[p] += values[p]; }
+    }
+    return { legal: rootLegal, visits: rootLegal.map(a => root.kids.get(a).n), prior: rootP, value: root.w[me] / Math.max(1, root.n) };
+  }
+  // Agente de la arena: búsqueda con `iterations` simulaciones por decisión y la acción más visitada.
+  function azAgent(model, iterations = 100) {
+    return {
+      act(g, rng) {
+        const legal = g.legalActions();
+        if (legal.length === 1) return legal[0];
+        const s = azSearch(model, g, iterations, rng);
+        let b = 0; s.visits.forEach((v, i) => { if (v > s.visits[b]) b = i; });
+        return s.legal[b];
+      },
+    };
+  }
   const MODEL_KINDS = ['red', 'tabla', 'lineal', 'valor'];
   // En Node: lee web/arena/models (index.json + archivos) y le pega a cada modelo su ficha.
   function loadModels(dir) {
@@ -593,6 +731,10 @@
       const m = models && models[arg];
       return { spec, label: (m && m.label) || arg, family: (m && m.family) || 'rl', desc: (m && m.desc) || '' };
     }
+    if (kind === 'az') {
+      const [id, it = 100] = arg.split(':'), m = models && models[id];
+      return { spec, label: `${(m && m.label) || id} + búsqueda (${it})`, family: 'rl', desc: `Búsqueda estilo AlphaZero con ${it} simulaciones por decisión: la red da los priors y valúa las hojas; las manos ajenas se reparten al azar en cada simulación.` };
+    }
     if (kind === 'ismcts' && arg) { const [it, k = 6, d = 2] = arg.split(':').map(Number); return { spec, label: `ISMCTS ${it} (S&B 8.11)`, family: 'búsqueda', desc: `MCTS para información imperfecta: ${it} iteraciones, ${k} candidatas, ${d} jugadas propias de profundidad.` }; }
     if (kind === 'experto' && arg) { const [r, k = 6, h = 1] = arg.split(':').map(Number); return { spec, label: `Experto (${r}×${k}${h > 1 ? `, ${h} vueltas` : ''})`, family: 'búsqueda', desc: `Monte Carlo: ${r} simulaciones de ${h} vuelta${h > 1 ? 's' : ''} de mesa para cada una de las ${k} mejores jugadas según Afinado.` }; }
     throw new Error(`Agente desconocido: ${spec}`);
@@ -601,6 +743,11 @@
     const [kind, arg] = spec.split(/:(.*)/s);
     if (kind === 'experto') return arg ? experto(...arg.split(':').map(Number)) : experto();
     if (kind === 'ismcts') return arg ? ismcts(...arg.split(':').map(Number)) : ismcts();
+    if (kind === 'az') {
+      const [id, it = 100] = arg.split(':'), m = models && models[id];
+      if (!m) throw new Error(`Falta el modelo ${id}`);
+      return azAgent(m, +it);
+    }
     if (MODEL_KINDS.includes(kind)) {
       const m = models && models[arg];
       if (!m) throw new Error(`Falta el modelo ${arg}`);
@@ -810,7 +957,7 @@
   const api = {
     SPECIES, COUNTS, SMALL, BIG, NS, NROWS, HAND, A_NODRAW, A_DRAW, A_FLOCK0, A_NOFLOCK, NACTIONS, MAX_TABLE,
     playAction, decodePlay, makeRng, hasWon, enclosed, takenBy, Game, progress, handValue, flockChoice, H, DEFAULT, AFINADO, coleccionistaScores, ranked, determinize, experto, ismcts, evaluate, EXPERTO_W,
-    G_DIM, A_DIM, DIM, globalFeatures, actionFeatures, decision, netLogit, netValue, netAgent, sbKey, tablaAgent, linealAgent, valorAgent, modelKinds: MODEL_KINDS, loadModels,
+    G_DIM, A_DIM, DIM, globalFeatures, actionFeatures, decision, netLogit, netValue, netAgent, sbKey, tablaAgent, linealAgent, valorAgent, prepNet, priors, azSearch, azAgent, netValues, modelKinds: MODEL_KINDS, loadModels,
     CATALOG, describe, makeAgent, playGame, eloUpdate, ELO_INITIAL, ELO_K, tournament, knockout, randomPlan,
   };
   root.CuBirdsEngine = api;

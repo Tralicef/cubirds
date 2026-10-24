@@ -332,7 +332,7 @@ async function loadRatings() {
 }
 const ratingOf = spec => RATINGS && RATINGS.find(a => a.spec === spec);
 const rivalPool = () => RATINGS ? RATINGS : E.CATALOG.map(a => ({ ...a, elo: null }));
-function modelIdOf(spec) { const [kind, arg] = spec.split(/:(.*)/s); return E.modelKinds && E.modelKinds.includes(kind) ? arg : null; }
+function modelIdOf(spec) { const [kind, arg] = spec.split(/:(.*)/s); return E.modelKinds && (E.modelKinds.includes(kind) || kind === 'az') ? arg.split(':')[0] : null; }
 async function ensureModels(specs) {
   const ids = [...new Set(specs.map(modelIdOf).filter(Boolean))].filter(id => !MODEL_CACHE[id]);
   if (!ids.length) return;
