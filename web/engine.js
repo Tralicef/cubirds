@@ -94,6 +94,19 @@
       return g;
     }
 
+    toJSON() {
+      const { n, deck, discard, rows, hands, cols, cur, phase, turn, round, done, winners, endReason } = this;
+      return { n, deck, discard, rows, hands, cols, cur, phase, turn, round, done, winners, endReason, rng: this.rng.state() };
+    }
+
+    static fromJSON(o) {
+      const g = Object.create(Game.prototype);
+      Object.assign(g, JSON.parse(JSON.stringify(o)));
+      g.rng = makeRng(o.rng);
+      g.log = [];
+      return g;
+    }
+
     _draw() {
       if (!this.deck.length) {
         if (!this.discard.length) return null;
