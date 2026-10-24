@@ -27,7 +27,7 @@ distintas o 2 especies con 3 pájaros.
 - `cubirds/game/engine.py`: reglas. Cada turno son hasta tres decisiones (jugar, robar, bandada) en un único espacio de 75 acciones.
 - `cubirds/game/bots.py`: bots heurísticos.
 - `web/engine.js`: el mismo motor en JavaScript, con el mismo generador aleatorio. `tests/test_js_parity.py` comprueba que las partidas sean idénticas en los dos lenguajes.
-- `web/`: el sitio, publicado en https://cubirds.vercel.app.
+- `web/`: el sitio, publicado en https://cu-birds.vercel.app.
 
 ## Probarlo
 
