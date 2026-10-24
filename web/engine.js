@@ -339,6 +339,52 @@
       return best;
     }, (g, l, rng) => H.afinado.act(g, rng), (g, l, rng) => H.afinado.act(g, rng));
   }
+  // ISMCTS (Cowling et al., 2012): en cada iteración reparte manos posibles a los rivales
+  // y baja por un árbol de jugadas propias eligiendo con UCB entre las candidatas de esa
+  // mano posible (las mejores según Afinado); cada hijo cuenta cuántas veces estuvo
+  // disponible. Los rivales juegan como Afinado. Tras `depth` jugadas propias se termina
+  // la vuelta y se evalúa como el Experto. Sólo existe en el motor JS.
+  function ismcts(iterations = 120, top = 6, depth = 2, c = 0.7) {
+    const node = () => ({ n: 0, w: 0, avail: 0, kids: new Map() });
+    return bot((g, legal, rng) => {
+      const me = g.cur, root = node();
+      const rootCands = ranked(g, legal, AFINADO).slice(0, top);
+      if (rootCands.length === 1) return rootCands[0];
+      for (let it = 0; it < iterations; it++) {
+        const sim = determinize(g, me, rng);
+        const path = [];
+        let cur = root, mine = 0;
+        while (!sim.done) {
+          if (sim.cur === me && sim.phase === 'play' && mine < depth) {
+            const cands = mine === 0 ? rootCands : ranked(sim, sim.legalActions(), AFINADO).slice(0, top);
+            let best = null, bu = -Infinity;
+            for (const a of cands) {
+              let k = cur.kids.get(a);
+              if (!k) { k = node(); cur.kids.set(a, k); }
+              k.avail++;
+              const u = k.n === 0 ? Infinity : k.w / k.n + c * Math.sqrt(Math.log(k.avail) / k.n);
+              if (u > bu) { bu = u; best = a; }
+            }
+            cur = cur.kids.get(best);
+            path.push(cur);
+            sim.step(best);
+            mine++;
+            if (mine === depth) { var stop = sim.turn + sim.n; }
+          } else {
+            if (mine === depth && sim.turn >= stop) break;
+            sim.step(H.afinado.act(sim, rng));
+          }
+        }
+        let opp = -Infinity;
+        for (let q = 0; q < sim.n; q++) if (q !== me) opp = Math.max(opp, evaluate(sim, q));
+        const v = (evaluate(sim, me) - EXPERTO_W.opp * opp) / EXPERTO_W.win;
+        for (const k of path) { k.n++; k.w += v; }
+      }
+      let best = rootCands[0], bn = -1;
+      for (const a of rootCands) { const k = root.kids.get(a); if (k && k.n > bn) { bn = k.n; best = a; } }
+      return best;
+    }, (g, l, rng) => H.afinado.act(g, rng), (g, l, rng) => H.afinado.act(g, rng));
+  }
   function valueBot(P) {
     return bot((g, legal, rng) => {
       const sc = coleccionistaScores(g, legal, P);
@@ -535,6 +581,7 @@
     { spec: 'goloso', label: 'Goloso', family: 'heurístico', desc: 'Se lleva la mayor cantidad de pájaros posible; a igualdad, juega menos cartas. Siempre roba y forma la bandada más grande.' },
     { spec: 'coleccionista', label: 'Coleccionista', family: 'heurístico', desc: 'Puntúa su mano según qué tan cerca está de formar bandadas de especies que le faltan y elige la jugada que más la mejora.' },
     { spec: 'afinado', label: 'Afinado', family: 'heurístico', desc: 'Coleccionista con pesos encontrados por búsqueda aleatoria: valora mucho más completar especies que ya tiene (camino a 2 especies con 3) y robar 2 cartas.' },
+    { spec: 'ismcts', label: 'ISMCTS (S&B 8.11)', family: 'búsqueda', desc: 'MCTS para información imperfecta: árbol de jugadas propias con UCB sobre manos posibles de los rivales (que juegan como Afinado), 2 jugadas de profundidad, 120 iteraciones.' },
     { spec: 'experto', label: 'Experto', family: 'búsqueda', desc: 'Monte Carlo: para las 6 mejores jugadas según Afinado, reparte 8 veces manos posibles a los rivales, simula una vuelta de mesa y evalúa cómo quedó contra el mejor rival.' },
   ];
   function describe(spec, models) {
@@ -545,12 +592,14 @@
       const m = models && models[arg];
       return { spec, label: (m && m.label) || arg, family: (m && m.family) || 'rl', desc: (m && m.desc) || '' };
     }
+    if (kind === 'ismcts' && arg) { const [it, k = 6, d = 2] = arg.split(':').map(Number); return { spec, label: `ISMCTS ${it} (S&B 8.11)`, family: 'búsqueda', desc: `MCTS para información imperfecta: ${it} iteraciones, ${k} candidatas, ${d} jugadas propias de profundidad.` }; }
     if (kind === 'experto' && arg) { const [r, k = 6, h = 1] = arg.split(':').map(Number); return { spec, label: `Experto (${r}×${k}${h > 1 ? `, ${h} vueltas` : ''})`, family: 'búsqueda', desc: `Monte Carlo: ${r} simulaciones de ${h} vuelta${h > 1 ? 's' : ''} de mesa para cada una de las ${k} mejores jugadas según Afinado.` }; }
     throw new Error(`Agente desconocido: ${spec}`);
   }
   function makeAgent(spec, models) {
     const [kind, arg] = spec.split(/:(.*)/s);
     if (kind === 'experto') return arg ? experto(...arg.split(':').map(Number)) : experto();
+    if (kind === 'ismcts') return arg ? ismcts(...arg.split(':').map(Number)) : ismcts();
     if (MODEL_KINDS.includes(kind)) {
       const m = models && models[arg];
       if (!m) throw new Error(`Falta el modelo ${arg}`);
@@ -759,7 +808,7 @@
 
   const api = {
     SPECIES, COUNTS, SMALL, BIG, NS, NROWS, HAND, A_NODRAW, A_DRAW, A_FLOCK0, A_NOFLOCK, NACTIONS, MAX_TABLE,
-    playAction, decodePlay, makeRng, hasWon, enclosed, takenBy, Game, progress, handValue, flockChoice, H, DEFAULT, AFINADO, coleccionistaScores, ranked, determinize, experto, evaluate, EXPERTO_W,
+    playAction, decodePlay, makeRng, hasWon, enclosed, takenBy, Game, progress, handValue, flockChoice, H, DEFAULT, AFINADO, coleccionistaScores, ranked, determinize, experto, ismcts, evaluate, EXPERTO_W,
     G_DIM, A_DIM, DIM, globalFeatures, actionFeatures, decision, netLogit, netValue, netAgent, sbKey, tablaAgent, linealAgent, valorAgent, modelKinds: MODEL_KINDS, loadModels,
     CATALOG, describe, makeAgent, playGame, eloUpdate, ELO_INITIAL, ELO_K, tournament, knockout, randomPlan,
   };

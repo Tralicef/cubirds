@@ -84,6 +84,9 @@ def main():
     ap = argparse.ArgumentParser(prog="python -m cubirds.rl.sb")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("listar")
+    ex = sub.add_parser("exportar", help="exporta a la arena lo ya entrenado en --salida")
+    ex.add_argument("algoritmos", nargs="*")
+    ex.add_argument("--salida", default=os.path.join(ROOT, "runs", "sb"))
     tr = sub.add_parser("entrenar")
     tr.add_argument("algoritmos", nargs="*")
     tr.add_argument("--todos", action="store_true")
@@ -97,6 +100,14 @@ def main():
     if a.cmd == "listar":
         for name, (cls, hp) in reg.items():
             print(f"{name:22} {cls.chapter:8} {cls.label}  {hp}")
+        return
+    if a.cmd == "exportar":
+        names = a.algoritmos or [n for n in reg if os.path.exists(os.path.join(a.salida, f"sb_{n}.json"))]
+        results = [(n, json.load(open(os.path.join(a.salida, f"sb_{n}.json")))) for n in names]
+        export(results)
+        for n, d in sorted(results, key=lambda x: -x[1]["score"]):
+            print(f"{n:26} índice {d['score']:.3f}")
+        print(f"Exportados a {MODELS_DIR}")
         return
     names = list(reg) if a.todos else a.algoritmos
     jobs = [(n, a.episodios, a.semilla + i, a.salida) for i, n in enumerate(names)]

@@ -29,6 +29,27 @@ distintas o 2 especies con 3 pájaros.
 - `web/engine.js`: el mismo motor en JavaScript, con el mismo generador aleatorio. `tests/test_js_parity.py` comprueba que las partidas sean idénticas en los dos lenguajes.
 - `web/`: el sitio, publicado en https://cu-birds.vercel.app.
 
+## Bots
+
+- **Azar**, **Goloso** (se lleva la mayor cantidad de pájaros) y **Coleccionista** (puntúa su mano según qué tan cerca está de formar bandadas).
+- **Afinado**: Coleccionista con pesos encontrados por búsqueda aleatoria. Aprendió que conviene mucho más completar especies que ya tenés (camino a "2 especies con 3") que sumar especies nuevas.
+- **Experto**: Monte Carlo con determinización. Para las mejores jugadas según Afinado, reparte manos posibles a los rivales con las cartas ocultas, simula una vuelta de mesa y evalúa contra el mejor rival.
+
+## Agentes que aprenden (`cubirds/rl`)
+
+- `features.py`: cada decisión (jugar, robar, bandada) se describe con un vector global y uno por acción legal; la misma codificación está en `web/engine.js`.
+- `ppo.py`: PPO por jugada, con shaping basado en potencial (Φ = 0,1·pájaros − 0,1·bandadas que faltan).
+- `neuroevo.py`: la misma red entrenada con estrategias evolutivas.
+- `sb/`: Sutton & Barto sobre afterstates. Tabulares (caps. 2, 5–8 y 12), aproximados (caps. 9–11 y 13) y TD-Gammon (16.1).
+
+```bash
+python -m cubirds.rl.ppo --iters 300 --out runs/ppo
+python -m cubirds.rl.neuroevo --gens 150 --out runs/evo
+python -m cubirds.rl.sb entrenar --todos --episodios 10000 --exportar
+python tools/export_model.py runs/ppo/best.json ppo "PPO" "PPO por jugada"
+node web/arena/rank.js 4000 azar goloso coleccionista afinado experto red:ppo tabla:sb_sarsa ...
+```
+
 ## Probarlo
 
 ```bash
