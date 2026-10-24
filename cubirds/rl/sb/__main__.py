@@ -35,7 +35,8 @@ def train_one(job):
     agent = cls(rng, **hp)
     t0 = time.time()
     curve = []
-    make_episode = getattr(agent, "make_episode", sample_episode)
+    shaping = getattr(cls, "shaping", True)
+    make_episode = getattr(agent, "make_episode", lambda r: sample_episode(r, shaping))
     for e in range(1, episodes + 1):
         agent.play(make_episode(rng))
         if e % max(1, episodes // 10) == 0:

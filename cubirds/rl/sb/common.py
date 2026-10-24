@@ -14,9 +14,18 @@ las reglas de Afinado: lo que se aprende es la jugada principal.
 - Métodos aproximados (Parte II): se usan las características por jugada de
   cubirds/rl/features.py.
 
-Recompensa: 1 al ganar (repartido si hay empate) y, entre una decisión y la
-siguiente, el cambio del potencial Φ = 0,1·pájaros − 0,1·bandadas que faltan
-(shaping de Ng et al., con Φ = 0 al terminar, que no cambia la política óptima).
+Recompensa: 1 al ganar (repartido si hay empate) y, con shaping, entre una
+decisión y la siguiente el cambio del potencial Φ = 0,1·pájaros − 0,1·bandadas
+que faltan (Ng et al., con Φ = 0 al terminar, que no cambia la política óptima).
+
+Ojo con el shaping en los métodos tabulares episódicos: el retorno desde una
+jugada queda R − Φ(estado antes de jugar), y ese Φ no depende de la jugada pero
+sí del estado, que la clave no ve entera; mezclado en el valor de cada clave
+la confunde (por ejemplo, "no se lleva nada" parece mejor porque es más común
+al principio, cuando Φ es bajo). Por eso esos métodos aprenden sin shaping
+(directamente la probabilidad de ganar); los bandidos sí lo usan, porque para
+ellos es la ganancia inmediata, y los aproximados también, porque sus
+características incluyen el estado y pueden descontar ese término.
 
 La misma clave está en web/engine.js (sbKeys).
 """
@@ -87,7 +96,8 @@ class Episode:
     que pasen robar/bandada (reglas de Afinado) y los turnos de los rivales, y
     devuelve la recompensa hasta la próxima decisión (o el final)."""
 
-    def __init__(self, rng, opponents=None):
+    def __init__(self, rng, opponents=None, shaping=True):
+        self.shaping = shaping
         if opponents is None:
             names, w = zip(*OPPONENTS)
             opponents = rng.choices(names, w, k=rng.choice(TABLE_OPP))
@@ -124,15 +134,17 @@ class Episode:
         self._advance()
         if g.done:
             win = (1.0 / len(g.winners)) if self.me in g.winners else 0.0
-            return win - self.phi
+            return win - self.phi if self.shaping else win
+        if not self.shaping:
+            return 0.0
         phi = potential(g, self.me)
         r = phi - self.phi
         self.phi = phi
         return r
 
 
-def sample_episode(rng):
-    return Episode(rng)
+def sample_episode(rng, shaping=True):
+    return Episode(rng, shaping=shaping)
 
 
 def evaluate(choose, games=300, seed=12345):

@@ -1,0 +1,514 @@
+<title>Laboratorio CuBirds</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: cuaderno de laboratorio — elegir algoritmo, entrenar, ver la curva, ver qué aprendió y una partida en cámara lenta. */
+:root {
+  --bg: #EAF0EC; --surface: #FFFFFF; --ink: #17261D; --muted: #5C6E62; --line: #C9D7CE; --grid: #E3EBE6;
+  --accent: #1F8A5B; --accent-ink: #FFFFFF; --ghost: #B3C4B9;
+  --s1: #2a78d6; --ref: #5C6E62;
+  --heat-lo: #f1f7f3; --heat-hi: #1F8A5B;
+  --pos: #2a78d6; --neg: #e34948;
+  --font-display: "Bowlby One", "Arial Black", Impact, system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101814; --surface: #1F2C25; --ink: #E9F2EC; --muted: #9DB1A4; --line: #34463B; --grid: #283830;
+    --accent: #4CC98C; --accent-ink: #0B1A12; --ghost: #4E6357; --s1: #3987e5; --ref: #9DB1A4;
+    --heat-lo: #22302a; --heat-hi: #4CC98C; --pos: #3987e5; --neg: #e66767;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101814; --surface: #1F2C25; --ink: #E9F2EC; --muted: #9DB1A4; --line: #34463B; --grid: #283830;
+  --accent: #4CC98C; --accent-ink: #0B1A12; --ghost: #4E6357; --s1: #3987e5; --ref: #9DB1A4;
+  --heat-lo: #22302a; --heat-hi: #4CC98C; --pos: #3987e5; --neg: #e66767;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 14px 48px; }
+header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.brand { font-family: var(--font-display); font-size: 24px; line-height: 1; flex: 1; }
+.brand small { font-family: var(--font-body); font-size: 13px; font-weight: 700; color: var(--muted); }
+.pill-link { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 14px; font-weight: 700; font-size: 14px; text-decoration: none; color: inherit; }
+.lead { margin: 0; color: var(--muted); max-width: 64ch; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 20px; line-height: 1.1; margin: 0; text-wrap: balance; }
+.eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .09em; font-weight: 800; color: var(--muted); }
+.groups { display: flex; flex-direction: column; gap: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 7px 12px; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.what { margin: 0; max-width: 64ch; }
+.rule { font-family: var(--font-mono); font-size: 13px; background: var(--bg); border-radius: 8px; padding: 10px 12px; overflow-x: auto; white-space: pre; }
+.hp { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px 16px; }
+.hp label { display: flex; flex-direction: column; gap: 2px; font-size: 13px; font-weight: 700; }
+.hp label span { display: flex; justify-content: space-between; }
+.hp label b { font-variant-numeric: tabular-nums; }
+.hp input[type=range] { width: 100%; accent-color: var(--accent); }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { height: 46px; border-radius: 12px; border: 0; padding: 0 18px; font-weight: 800; font-size: 15px; cursor: pointer; background: var(--accent); color: var(--accent-ink); }
+.btn.secondary { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+.btn:disabled { opacity: .4; cursor: default; }
+.stat { font-size: 13.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stat b { color: var(--ink); }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.chart .lbl { fill: var(--ink); font-weight: 700; }
+.hint { font-size: 12.5px; color: var(--muted); margin: 0; max-width: 64ch; }
+.scroll { overflow-x: auto; }
+.heat { border-collapse: separate; border-spacing: 3px; font-variant-numeric: tabular-nums; font-size: 12.5px; }
+.heat th { font-size: 11px; color: var(--muted); font-weight: 700; padding: 0 4px; white-space: nowrap; }
+.heat tbody th { text-align: left; color: var(--ink); font-size: 12.5px; }
+.heat td { min-width: 52px; height: 36px; text-align: center; border-radius: 6px; font-weight: 800; }
+.heat td small { display: block; font-weight: 600; font-size: 10px; opacity: .75; }
+.heat td.strong { color: #fff; }
+.heat td.empty { color: var(--muted); font-weight: 400; background: var(--bg); }
+.bars { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
+.bar { display: grid; grid-template-columns: minmax(0, 1fr) 160px 48px; gap: 8px; align-items: center; }
+@media (max-width: 520px) { .bar { grid-template-columns: minmax(0, 1fr) 90px 44px; } }
+.bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar .track { position: relative; height: 10px; background: var(--grid); border-radius: 3px; }
+.bar .track i { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+.bar .track::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--muted); }
+.bar b { text-align: right; font-variant-numeric: tabular-nums; }
+.turns { display: flex; flex-direction: column; gap: 10px; }
+.turn { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.turn h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.board { display: flex; flex-direction: column; gap: 2px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.hand { display: flex; flex-wrap: wrap; gap: 6px; }
+.c { border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; display: flex; flex-direction: column; align-items: center; min-width: 56px; font-variant-numeric: tabular-nums; }
+.c b { font-family: var(--font-display); font-size: 16px; font-weight: 400; }
+.c small { font-size: 11px; color: var(--muted); }
+.c.pick { border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.why { font-size: 13.5px; }
+.upd { font-family: var(--font-mono); font-size: 12.5px; background: var(--bg); border-radius: 8px; padding: 8px 10px; overflow-x: auto; white-space: pre-wrap; }
+.err { color: var(--neg); font-weight: 700; margin: 0; }
+.seg { display: flex; flex-wrap: wrap; background: var(--bg); border-radius: 10px; padding: 3px; gap: 3px; }
+.seg button { flex: 1 0 auto; border: 0; background: transparent; border-radius: 8px; height: 34px; padding: 0 8px; font-weight: 700; font-size: 13px; cursor: pointer; color: var(--muted); font-variant-numeric: tabular-nums; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+.tree { display: flex; flex-direction: column; gap: 6px; }
+.tree .row { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr) 118px; gap: 8px; align-items: center; font-variant-numeric: tabular-nums; font-size: 13px; }
+.tree .row b.card { font-size: 13px; font-weight: 800; }
+.tree .row .vbar { height: 14px; background: var(--grid); border-radius: 4px; overflow: hidden; }
+.tree .row .vbar i { display: block; height: 100%; background: var(--ghost); border-radius: 4px; transition: width .3s; }
+.tree .row.best .vbar i { background: var(--accent); }
+.tree .row.best b.card { color: var(--accent); }
+.tree .row span { color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<div class="wrap">
+  <header>
+    <div class="brand">Laboratorio <small>CuBirds · cómo aprenden</small></div>
+    <a class="pill-link" href="arena.html">Arena</a>
+    <a class="pill-link" href="./">Jugar</a>
+  </header>
+  <p class="lead">Elegí un algoritmo y miralo aprender en vivo, en tu navegador. Todos juegan partidas contra una mezcla de bots y se evalúan cada tanto en dos mesas fijas, siempre con las mismas cartas. Deciden qué pájaros jugar y dónde; robar y formar bandadas lo hacen como el bot Afinado.</p>
+
+  <div class="card">
+    <div class="eyebrow">Algoritmo</div>
+    <div class="groups" id="groups"></div>
+  </div>
+
+  <div class="card">
+    <div><div class="eyebrow" id="chap"></div><h2 id="algName"></h2></div>
+    <p class="what" id="what"></p>
+    <div class="rule" id="rule"></div>
+    <div class="hp" id="hp"></div>
+    <div class="controls">
+      <button class="btn" type="button" id="runBtn">Entrenar</button>
+      <button class="btn secondary" type="button" id="resetBtn">Reiniciar</button>
+      <button class="btn secondary" type="button" id="slowBtn">Ver una partida en cámara lenta</button>
+    </div>
+    <div class="stat" id="stat">Preparando…</div>
+    <p class="err" id="err" hidden></p>
+  </div>
+
+  <div class="card">
+    <div><div class="eyebrow" id="curveEyebrow">Curva de aprendizaje</div><h2 id="curveTitle">¿Cuánto gana?</h2></div>
+    <div class="chart" id="curve"></div>
+    <p class="hint" id="curveHint"></p>
+  </div>
+
+  <div class="card">
+    <div><div class="eyebrow">Qué aprendió</div><h2 id="viewTitle"></h2></div>
+    <div id="view"></div>
+    <p class="hint" id="viewHint"></p>
+  </div>
+
+  <div class="card" id="slowCard" hidden>
+    <div><div class="eyebrow">Cámara lenta</div><h2>Una partida, jugada por jugada</h2></div>
+    <p class="hint" id="slowSummary"></p>
+    <div class="turns" id="turns"></div>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const load = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const E = window.CuBirdsEngine;
+const SP = E.SPECIES, PL = ['Flamencos', 'Búhos', 'Tucanes', 'Patos', 'Loros', 'Urracas', 'Carriceros', 'Petirrojos'];
+const AB = ['Fla', 'Búh', 'Tuc', 'Pat', 'Lor', 'Urr', 'Car', 'Pet'];
+
+const G1 = 'Bandidos · cap. 2', G2 = 'Monte Carlo y TD · caps. 5–7', G3 = 'Trazas y planificación · caps. 8 y 12', G4 = 'Aproximación lineal · caps. 9–12',
+  G5 = 'Gradiente de política · cap. 13', G6 = 'Redes neuronales · cap. 16', G7 = 'Neuroevolución', G8 = 'Planificación · cap. 8';
+const INFO = {
+  bandido: { group: G1, name: 'Bandido ε-greedy', chap: 'Sutton & Barto 2.2–2.4',
+    what: 'Sólo mira lo que pasa hasta su próxima jugada: promedia cuánto subió su potencial (más pájaros, menos bandadas por formar) cada vez que eligió una jugada en cada situación. Casi siempre juega la que mejor le fue; a veces (ε) prueba otra al azar para seguir aprendiendo.',
+    rule: 'N(s) ← N(s) + 1\nQ(s) ← Q(s) + [r − Q(s)] / N(s)        (promedio incremental)\njugada: la de mayor Q, o al azar con probabilidad ε' },
+  ucb: { group: G1, name: 'UCB', chap: 'Sutton & Barto 2.7',
+    what: 'Como el bandido, pero en vez de explorar al azar le da un bono a las situaciones que probó pocas veces: "optimismo ante la incertidumbre". Con el tiempo el bono se achica.',
+    rule: 'jugada: máx  Q(s) + c · √( ln t / N(s) )\nQ(s) ← promedio de r' },
+  optimista: { group: G1, name: 'Valores iniciales optimistas', chap: 'Sutton & Barto 2.6',
+    what: 'Un bandido que no explora al azar (ε = 0): arranca creyendo que cada situación es buenísima. Cada vez que prueba una se desilusiona y pasa a otra que todavía "promete". Explora por optimismo, no por azar.',
+    rule: 'Q₀(s) = init        (mejor que cualquier resultado real)\nQ(s) ← Q(s) + α · [r − Q(s)]\njugada: la de mayor Q, sin exploración al azar' },
+  grad_bandit: { group: G1, name: 'Bandido por gradiente', chap: 'Sutton & Barto 2.8',
+    what: 'No estima valores: le da una preferencia a cada situación y juega por sorteo (softmax). Si una jugada salió mejor que su promedio histórico, sube la preferencia de lo que jugó y baja la de las demás.',
+    rule: 'π(a) = e^H(s_a) / Σ e^H        R̄ = promedio de r\nH(jugada) ← H + α·(r − R̄)·(1 − π)\nH(otra)   ← H − α·(r − R̄)·π' },
+  mc: { group: G2, name: 'Monte Carlo on-policy', chap: 'Sutton & Barto 5.4', atEnd: true,
+    what: 'Espera a que termine la partida y recién ahí aprende: a cada situación le asigna todo lo que ganó desde esa jugada hasta el final (incluido el 1 si ganó la partida). Ya no mira sólo el turno, sino las consecuencias.',
+    rule: 'al final de la partida, de atrás para adelante:\nG ← G + r_t\nQ(s_t) ← Q(s_t) + [G − Q(s_t)] / N(s_t)' },
+  mc_off: { group: G2, name: 'Monte Carlo off-policy', chap: 'Sutton & Barto 5.7', atEnd: true,
+    what: 'Juega explorando (ε-greedy) pero quiere aprender cómo le iría jugando siempre su mejor jugada. Corrige la diferencia pesando cada partida (muestreo de importancia): si hizo una jugada que la greedy nunca haría, lo anterior ya no le sirve y corta ahí. Con partidas largas corta casi siempre: aprende muy poco.',
+    rule: 'de atrás para adelante:  G ← G + r_t\nC(s) ← C(s) + W;   Q(s) ← Q(s) + W/C(s) · [G − Q(s)]\nsi la jugada no era la greedy: cortar\nW ← W / b(jugada)      (b = prob. de jugarla explorando)' },
+  sarsa: { group: G2, name: 'SARSA', chap: 'Sutton & Barto 6.4',
+    what: 'Aprende en cada jugada sin esperar al final (diferencias temporales). Corrige su estimación con lo que pasó más lo que estima para la jugada que hace en su turno siguiente.',
+    rule: 'objetivo = r_t + Q(s_{t+1})          (la jugada que hizo después)\nQ(s_t) ← Q(s_t) + α · [objetivo − Q(s_t)]' },
+  q_learning: { group: G2, name: 'Q-learning', chap: 'Sutton & Barto 6.5',
+    what: 'Igual que SARSA, pero para el turno siguiente usa la mejor jugada posible, la haya hecho o no (off-policy): aprende la política óptima aunque explore.',
+    rule: 'objetivo = r_t + máx_a Q(s_{t+1}, a)\nQ(s_t) ← Q(s_t) + α · [objetivo − Q(s_t)]' },
+  expected_sarsa: { group: G2, name: 'Expected SARSA', chap: 'Sutton & Barto 6.6',
+    what: 'Para el turno siguiente usa el promedio de lo que estima de cada jugada, pesado por la probabilidad de hacerla. Menos ruido que SARSA.',
+    rule: 'objetivo = r_t + Σ_a π(a) · Q(s_{t+1}, a)\nQ(s_t) ← Q(s_t) + α · [objetivo − Q(s_t)]' },
+  double_q: { group: G2, name: 'Double Q-learning', chap: 'Sutton & Barto 6.7',
+    what: 'Q-learning tiende a ser demasiado optimista: el máximo de varias estimaciones con ruido sale más alto de lo real. Acá hay dos tablas: una elige cuál es la mejor jugada siguiente y la otra dice cuánto vale. En cada turno se actualiza una de las dos, al azar.',
+    rule: 'con prob. ½ (si no, al revés):\na* = argmáx_a Q1(s_{t+1}, a)\nQ1(s_t) ← Q1(s_t) + α · [r_t + Q2(s_{t+1}, a*) − Q1(s_t)]\njugada: la de mayor Q1 + Q2' },
+  sarsa_n: { group: G2, name: 'SARSA de n pasos', chap: 'Sutton & Barto 7.2', atEnd: true,
+    what: 'Punto medio entre TD y Monte Carlo: suma lo que ganó en n jugadas reales y completa con la estimación de la jugada n+1.',
+    rule: 'objetivo = r_t + … + r_{t+n−1} + Q(s_{t+n})\nQ(s_t) ← Q(s_t) + α · [objetivo − Q(s_t)]' },
+  tree_backup: { group: G2, name: 'Tree backup de n pasos', chap: 'Sutton & Barto 7.5', atEnd: true,
+    what: 'Off-policy sin muestreo de importancia: suma recompensas reales mientras lo que jugó coincide con lo que haría la greedy; en cuanto exploró, corta y completa con la estimación de la mejor jugada.',
+    rule: 'G_t = r_t + G_{t+1}               si la jugada siguiente fue la greedy (y quedan pasos)\nG_t = r_t + máx_a Q(s_{t+1}, a)    si no\nQ(s_t) ← Q(s_t) + α · [G_t − Q(s_t)]' },
+  sarsa_lambda: { group: G3, name: 'SARSA(λ)', chap: 'Sutton & Barto 12.7', atEnd: true,
+    what: 'Cada error de la jugada actual también corrige a las situaciones de jugadas anteriores, cada vez menos (trazas de elegibilidad que se desvanecen con λ).',
+    rule: 'δ = r_t + Q(s_{t+1}) − Q(s_t)\nz(s_t) ← 1;   para toda s:  Q(s) ← Q(s) + α·δ·z(s);  z(s) ← λ·z(s)' },
+  q_lambda: { group: G3, name: 'Q(λ) de Watkins', chap: 'Sutton & Barto 12.10', atEnd: true,
+    what: 'Q-learning con trazas: cada error también corrige las jugadas anteriores, pero las trazas se borran cuando explora, porque desde ahí ya no sigue la política greedy que quiere aprender.',
+    rule: 'δ = r_t + máx_a Q(s_{t+1}, a) − Q(s_t)\nz(s_t) ← 1;   para toda s: Q(s) ← Q(s) + α·δ·z(s)\nsi la jugada siguiente es greedy: z ← λ·z;   si exploró: z ← 0' },
+  dyna_q: { group: G3, name: 'Dyna-Q', chap: 'Sutton & Barto 8.2',
+    what: 'Q-learning más "imaginación": guarda lo que le pasó y, después de cada jugada real, repasa algunas experiencias viejas como si las volviera a vivir.',
+    rule: 'después de cada jugada real (Q-learning):\nrepetir n veces: elegir una experiencia guardada (s, r, s′)\n  Q(s) ← Q(s) + α · [r + máx Q(s′) − Q(s)]' },
+  prioritized: { group: G3, name: 'Barrido priorizado', chap: 'Sutton & Barto 8.4',
+    what: 'Como Dyna-Q repasa experiencias guardadas, pero no al azar: primero las situaciones cuyo valor más cambiaría. Cuando una cambia, pone en la cola a las que llevan a ella, y así la corrección se propaga hacia atrás.',
+    rule: 'P = |r + máx Q(s′) − Q(s)|;   si P > θ: s entra a la cola\nrepetir n veces: sacar la s de mayor P y actualizarla\n  para cada predecesora s̄ de s: calcular su P y encolarla' },
+  bandido_lineal: { group: G4, name: 'Bandido lineal', chap: 'Bandido contextual (Sutton & Barto 2.9)',
+    what: 'Como el bandido, sólo mira lo que pasa hasta su próxima jugada, pero en vez de una tabla usa una fórmula: valor = suma de pesos por 65 características del estado y de la jugada. Así, lo que aprende de una jugada le sirve para jugadas parecidas que nunca vio.',
+    rule: 'v̂(a) = w · x_a\nw ← w + α · [r − v̂(a)] · x_a\njugada: la de mayor v̂, o al azar con prob. ε' },
+  mc_grad: { group: G4, name: 'Monte Carlo por gradiente', chap: 'Sutton & Barto 9.3', atEnd: true,
+    what: 'Monte Carlo con la fórmula lineal: al final de la partida ajusta los pesos para que el valor estimado de cada jugada se parezca a lo que ganó desde ahí hasta el final.',
+    rule: 'al final:  G_t = r_t + … + r_T\nw ← w + α · [G_t − v̂(x_t)] · x_t' },
+  sarsa_lin: { group: G4, name: 'SARSA semi-gradiente', chap: 'Sutton & Barto 10.1',
+    what: 'SARSA con la fórmula lineal. "Semi" porque el objetivo también usa la fórmula, y al derivar se hace de cuenta que es fijo.',
+    rule: 'objetivo = r_t + v̂(x_{t+1})\nw ← w + α · [objetivo − v̂(x_t)] · x_t' },
+  sarsa_lin_n: { group: G4, name: 'SARSA semi-gradiente de n pasos', chap: 'Sutton & Barto 10.2', atEnd: true,
+    what: 'Suma n jugadas de recompensas reales antes de completar con la fórmula. Con n chico aprende rápido pero sesgado; con n grande se parece a Monte Carlo.',
+    rule: 'objetivo = r_t + … + r_{t+n−1} + v̂(x_{t+n})\nw ← w + α · [objetivo − v̂(x_t)] · x_t' },
+  q_lin: { group: G4, name: 'Q-learning semi-gradiente', chap: 'Sutton & Barto 10.1 y 11.3',
+    what: 'Q-learning con la fórmula lineal. Juntar off-policy, aproximación y bootstrapping es la "tríada mortal" del capítulo 11: puede divergir.',
+    rule: 'objetivo = r_t + máx_a v̂(x_{t+1, a})\nw ← w + α · [objetivo − v̂(x_t)] · x_t' },
+  true_online: { group: G4, name: 'True online SARSA(λ)', chap: 'Sutton & Barto 12.8', atEnd: true,
+    what: 'La versión exacta de las trazas para la fórmula lineal: da lo mismo que mirar todas las jugadas futuras a la vez (el λ-retorno), pero calculado jugada a jugada.',
+    rule: 'δ = r_t + v̂(x_{t+1}) − v̂(x_t)\nz ← λ·z + (1 − α·λ·zᵀx_t) · x_t\nw ← w + α·(δ + v̂ − v̂_ant)·z − α·(v̂ − v̂_ant)·x_t' },
+  lstd: { group: G4, name: 'LSTD', chap: 'Sutton & Barto 9.8', atEnd: true,
+    what: 'No da pasitos: junta estadísticas de todas las partidas y cada 100 resuelve de una vez las ecuaciones del punto fijo de TD. No hay α que ajustar, pero cada cálculo es más caro.',
+    rule: 'A ← A + x_t · (x_t − x_{t+1})ᵀ\nb ← b + r_t · x_t\ncada 100 partidas:  w = A⁻¹ · b' },
+  reinforce: { group: G5, name: 'REINFORCE con línea de base', chap: 'Sutton & Barto 13.4', atEnd: true,
+    what: 'No estima valores: aprende directamente una preferencia por cada característica de la jugada. Si una partida salió mejor que lo esperado, sube la probabilidad de lo que jugó.',
+    rule: 'π(a) = softmax(θ · x_a)\nal final: δ = G − b(s);   θ ← θ + α · δ · [x_jugada − Σ_a π(a)·x_a]' },
+  actor_critic: { group: G5, name: 'Actor-crítico', chap: 'Sutton & Barto 13.5',
+    what: 'Dos partes: el actor elige con probabilidades (como REINFORCE) y el crítico estima cómo viene la partida. En cada jugada, la sorpresa del crítico (δ) le dice al actor si lo que jugó salió mejor o peor de lo esperado, sin esperar al final.',
+    rule: 'δ = r_t + V(s_{t+1}) − V(s_t)\ncrítico: u ← u + α_w · δ · ∇V(s_t)\nactor:   θ ← θ + α · δ · [x_jugada − Σ_a π(a)·x_a]' },
+  actor_critic_lambda: { group: G5, name: 'Actor-crítico con trazas', chap: 'Sutton & Barto 13.5',
+    what: 'El actor-crítico con trazas en las dos partes: la sorpresa de cada jugada también corrige, cada vez menos, lo que jugó antes.',
+    rule: 'z_u ← λ·z_u + ∇V(s_t);    z_θ ← λ·z_θ + ∇ ln π(jugada)\nu ← u + α_w · δ · z_u;    θ ← θ + α · δ · z_θ' },
+  ppo: { group: G5, name: 'PPO (liviano)', chap: 'Schulman et al., 2017', atEnd: true,
+    what: 'Lo mismo que usa el agente PPO del ranking, en versión chica: política lineal en vez de red. Junta una tanda de partidas, calcula ventajas con GAE y repasa la tanda varias veces, pero con un freno (el recorte): si la probabilidad de una jugada ya cambió más de ε, deja de empujarla.',
+    rule: 'ventaja A_t = Σ_k λ^k · δ_{t+k}        (GAE)\nr = π_nuevo(jugada) / π_viejo(jugada)\nK pasadas:  maximizar  mín( r·A,  recorte(r, 1−ε, 1+ε)·A )' },
+  td_gammon: { group: G6, name: 'TD-Gammon', chap: 'Sutton & Barto 16.1 (Tesauro)',
+    what: 'La idea con la que Tesauro hizo jugar al backgammon a nivel campeón: una red neuronal (65 → 24 → 1) que estima cuánto va a ganar desde cada jugada hasta el final, entrenada con TD(λ). Las trazas se llevan sobre todos los pesos de la red.',
+    rule: 'v̂(x) = red(x)\nz ← λ·z + ∇v̂(x_t)\nδ = r_t + v̂(x_{t+1}) − v̂(x_t)\npesos ← pesos + α · δ · z' },
+  es: { group: G7, name: 'Estrategia evolutiva (ES)', chap: 'OpenAI-ES',
+    what: 'Un solo "padre". Cada generación nacen hijos mutados (en pares +ruido/−ruido), todos juegan las mismas partidas y el padre se corre hacia las mutaciones de los mejores. Los hijos no sobreviven: sólo indican la dirección.',
+    rule: 'hijos: θ ± σ·ε_i   →   fitness de cada uno\nθ ← θ + α · Σ_i puesto_i · ε_i      (los hijos se descartan)' },
+  ga: { group: G7, name: 'Algoritmo genético', chap: 'GA con elitismo',
+    what: 'Una población que evoluciona de verdad: los mejores sobreviven intactos (élite), y el resto de la próxima generación son hijos de dos padres elegidos por torneo, con cruza y mutación.',
+    rule: 'ordenar por fitness → la élite pasa directo\nresto: padre1, padre2 = torneo;  hijo = cruza(padre1, padre2) + mutación' },
+  experto: { group: G8, name: 'Experto (rollouts)', chap: 'Sutton & Barto 8.10 (rollouts)', budgetUnit: 'manos imaginadas',
+    what: 'El bot Experto: para cada una de sus mejores jugadas imagina varias veces qué tienen los rivales, juega una vuelta de mesa con todos como Afinado y evalúa cómo quedó contra el mejor rival. Juega la mejor evaluada. A diferencia de ISMCTS, le da a todas las candidatas la misma cantidad de simulaciones.',
+    rule: 'para cada candidata a, repetir m veces:\n  repartir manos posibles a los rivales (con las cartas que no ve)\n  jugar a y una vuelta de mesa, todos como Afinado\n  evaluar: avance + mano + pájaros, menos el mejor rival\njugada: la de mayor promedio' },
+  ismcts: { group: G8, name: 'ISMCTS', chap: 'Sutton & Barto 8.11 (MCTS, información imperfecta)',
+    what: 'No aprende nada entre partidas: en cada jugada piensa desde cero. Imagina muchas veces cómo podría seguir (repartiendo a los rivales manos posibles con las cartas que no vio), y juega la que más simuló. Con UCB va concentrando las simulaciones en las jugadas que parecen mejores.',
+    rule: 'por cada simulación:\n  repartir a los rivales manos posibles (determinización)\n  elegir jugada con UCB: máx  valor_medio(a) + c·√( ln N / N(a) )\n  jugar una vuelta de mesa y evaluar; sumar el resultado a esa jugada\njugada final: la más simulada' },
+  exit: { group: G8, name: 'Expert Iteration (liviano)', chap: 'Anthony, Tian y Barber, 2017',
+    what: 'Junta búsqueda y aprendizaje. El experto es una búsqueda que imagina a los rivales jugando como el aprendiz; el aprendiz es una política lineal que aprende a imitar cómo reparte el experto sus simulaciones. Lo que se evalúa es el aprendiz solo, sin búsqueda.',
+    rule: 'experto: búsqueda con UCB (rivales = aprendiz)\nobjetivo(a) = simulaciones(a) / total\naprendiz:  θ ← θ + α · Σ_a [objetivo(a) − π(a)] · x_a' },
+};
+const HP = {
+  epsilon: ['ε (exploración)', 0, 0.5, 0.01], alpha: ['α (paso)', 0.001, 0.3, 0.001], c: ['c (bono UCB)', 0, 3, 0.05],
+  n: ['n (pasos)', 1, 10, 1], lambda: ['λ (traza)', 0, 1, 0.05], planning: ['repasos por jugada', 0, 30, 1],
+  alphaW: ['α del crítico / línea de base', 0.001, 0.1, 0.001], baseline: ['con línea de base (0/1)', 0, 1, 1],
+  pop: ['hijos por generación', 6, 60, 2], rounds: ['partidas por hijo', 5, 60, 5], sigma: ['σ (mutación)', 0.01, 0.6, 0.01],
+  elite: ['sobrevivientes (élite)', 1, 12, 1], mutRate: ['prob. de mutar cada peso', 0.05, 1, 0.05],
+  iterations: ['simulaciones por jugada', 10, 1000, 10], init: ['valor inicial', 0, 2, 0.1],
+  theta: ['θ (umbral de prioridad)', 0, 0.2, 0.005], batch: ['partidas por tanda', 5, 100, 5], epochs: ['pasadas por tanda (K)', 1, 10, 1],
+  clip: ['ε del recorte', 0.05, 0.5, 0.05], samples: ['manos imaginadas por jugada', 1, 60, 1],
+};
+const FEATURE_NAMES = [
+  ...SP.map(s => `mano: ${s}`), ...SP.map(s => `colección: ${s}`), 'bandadas que le faltan', ...SP.map(s => `rivales: ${s} en colección`),
+  'bandadas que le faltan al mejor rival', 'cartas en mano de los rivales', 'cartas en su mano', 'cartas en el mazo', 'jugadores en la mesa',
+  'fase: jugar', 'fase: robar', 'fase: bandada',
+  ...SP.map(s => `juega ${s}`), 'es una jugada', 'cartas que juega', 'pájaros que se lleva', ...SP.map(s => `se lleva ${s}`),
+  'bandadas chicas posibles después', 'bandadas grandes posibles después', 'mejora de la mano (Coleccionista)', 'mejora de la mano (Afinado)',
+  'no encierra nada (puede robar)', 'largo de la fila después', 'roba 2', 'no roba', 'forma bandada', 'guarda en la colección',
+  'la bandada acerca a ganar', 'no forma bandada', 'colección de esa especie después'];
+const TAKEN_LABEL = ['No se lleva nada', 'Se lleva 1', 'Se lleva 2', 'Se lleva 3–4', 'Se lleva 5 o más'];
+const READY_LABEL = ['sin bandada después', 'bandada chica', 'bandada grande'];
+const describeKey = k => {
+  const [taken, ready, gain, prog] = k.split(',').map(Number);
+  return `${TAKEN_LABEL[taken].toLowerCase()}, ${ready ? `después puede formar ${READY_LABEL[ready]}${gain ? ` que lo acerca ${gain}` : ' que no lo acerca'}` : 'sin bandada posible después'}, le faltan ${['0–1', '2', '3', '4+'][prog]} bandadas`;
+};
+const describeAction = (a, hand) => { const [s, r, side] = E.decodePlay(a), k = hand[s]; return `${k} ${k === 1 ? SP[s] : PL[s]} a la ${side ? 'derecha' : 'izquierda'} de la fila ${r + 1}`; };
+const handText = h => h.map((k, s) => k ? `${AB[s]}×${k}` : '').filter(Boolean).join(' ') || '—';
+const fmtIdx = x => x.toFixed(2);
+
+const hashAlg = location.hash.slice(1);
+let defaults = {}, current = INFO[hashAlg] ? hashAlg : load('cubirds-lab-alg', 'sarsa'), hp = {}, state = null, running = false;
+const worker = new Worker('lab-worker.js');
+worker.onerror = () => { $('err').textContent = 'No se pudo iniciar el entrenamiento en este navegador.'; $('err').hidden = false; };
+worker.onmessage = e => {
+  const m = e.data;
+  if (m.type === 'ready') { defaults = m.defaults; renderGroups(); select(current); return; }
+  if (m.type === 'state') { state = m; running = m.running; render(); if (m.slow) renderSlow(m.slow); }
+};
+
+function renderGroups() {
+  const groups = {};
+  for (const [id, info] of Object.entries(INFO)) (groups[info.group] = groups[info.group] || []).push(id);
+  $('groups').innerHTML = Object.entries(groups).map(([g, ids]) => `<div><div class="eyebrow" style="margin-bottom:6px">${esc(g)}</div><div class="chips">${ids.map(id =>
+    `<button type="button" class="chip" data-alg="${id}" aria-pressed="false">${esc(INFO[id].name)}</button>`).join('')}</div></div>`).join('');
+}
+function select(id) {
+  current = INFO[id] ? id : 'sarsa'; store('cubirds-lab-alg', current);
+  document.querySelectorAll('[data-alg]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.alg === current)));
+  const info = INFO[current];
+  $('chap').textContent = info.chap; $('algName').textContent = info.name; $('what').textContent = info.what; $('rule').textContent = info.rule;
+  hp = Object.assign({}, defaults[current], load('cubirds-lab-hp-' + current, {}));
+  $('hp').innerHTML = Object.keys(defaults[current]).map(k => {
+    const [label, min, max, step] = HP[k];
+    return `<label for="hp-${k}"><span>${esc(label)} <b id="hpv-${k}">${hp[k]}</b></span><input type="range" id="hp-${k}" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${hp[k]}"></label>`;
+  }).join('');
+  $('slowBtn').disabled = ['es', 'ga'].includes(current);
+  $('slowCard').hidden = true;
+  reset();
+}
+function reset() {
+  running = false; $('runBtn').textContent = 'Entrenar';
+  $('stat').textContent = 'Preparando…';
+  worker.postMessage({ type: 'reset', alg: current, hp, seed: 1 });
+}
+
+// ------------------------- render -------------------------
+let thinkAt = -1;
+const refText = () => state.refs ? ` · Afinado ${fmtIdx(state.refs.afinado)}, Azar ${fmtIdx(state.refs.azar)}` : '';
+function render() {
+  if (!state) return;
+  const pob = ['es', 'ga'].includes(state.alg);
+  const plan = state.algType === 'plan', bud = state.budgets, bunit = INFO[state.alg].budgetUnit || 'simulaciones';
+  $('curveEyebrow').textContent = plan ? 'Rendimiento' : 'Curva de aprendizaje';
+  $('curveTitle').textContent = plan ? '¿Juega mejor si piensa más?' : '¿Cuánto gana?';
+  $('curveHint').textContent = plan
+    ? `Índice de victorias según cuántas ${bunit} usa por jugada, en escala logarítmica. No hay entrenamiento: cada punto es el mismo algoritmo pensando más o menos.`
+    : 'Índice de victorias: 1 es lo justo (ganar 1 de cada n partidas en mesas de n); más arriba es mejor. Los puntos son evaluaciones sin explorar, en mesas y partidas fijas contra Afinado, Coleccionista y Goloso; la línea clara es el promedio de las partidas de entrenamiento, que incluyen exploración y rivales más fáciles.';
+  if (plan) {
+    const done = state.evals.length;
+    $('runBtn').textContent = running ? 'Pausar' : done >= bud.length ? 'Medición completa' : done ? 'Seguir midiendo' : 'Medir según cuánto piensa';
+    $('runBtn').disabled = !running && done >= bud.length;
+    $('stat').innerHTML = done
+      ? `Medido con ${state.evals.map(e => `<b>${e[0]}</b>`).join(', ')} ${bunit} por jugada${state.measuring ? ` · midiendo ${state.measuring}…` : ''}${refText()}`
+      : `Tocá Medir para ver cómo cambia su juego con ${bud.slice(0, -1).join(', ')} y ${bud[bud.length - 1]} ${bunit} por jugada. La última tarda un rato.`;
+    drawCurve(false, true);
+    renderView(state.view, false);
+    return;
+  }
+  $('runBtn').disabled = false;
+  const last = state.evals[state.evals.length - 1];
+  $('runBtn').textContent = running ? 'Pausar' : (state.rounds || state.gens ? 'Seguir entrenando' : 'Entrenar');
+  $('stat').innerHTML = `${pob ? `<b>${state.gens}</b> generaciones` : `<b>${state.rounds.toLocaleString('es-AR')}</b> partidas de entrenamiento`} · última evaluación: índice <b>${fmtIdx(last[1])}</b>${refText()}`;
+  drawCurve(pob);
+  renderView(state.view, pob);
+}
+
+function drawCurve(pob, plan = false) {
+  const host = $('curve'), W = Math.max(300, host.clientWidth || 600), H = 240, m = { l: 36, r: 64, t: 10, b: 26 };
+  if (plan && !state.evals.length) { host.innerHTML = '<p class="hint">Todavía no se midió.</p>'; return; }
+  const ev = state.evals.map(([x, d]) => [plan ? Math.log10(x) : x, d]);
+  const tr = pob ? state.popHist.map(p => [p.gen, p.parentFit]) : state.curve;
+  const refs = state.refs ? [['Afinado', state.refs.afinado], ['Azar', state.refs.azar]] : [];
+  const xs = ev.map(p => p[0]).concat(tr.map(p => p[0]));
+  const bud = state.budgets, xMin = plan ? Math.log10(bud[0]) : 0, xMax = plan ? Math.log10(bud[bud.length - 1]) : Math.max(1, ...xs);
+  const ys = ev.map(p => p[1]).concat(tr.map(p => p[1]), refs.map(r => r[1]), [0, 1]);
+  const lo = 0, hi = Math.max(1.6, Math.ceil(Math.max(...ys) * 5) / 5);
+  const x = v => m.l + (v - xMin) / Math.max(1e-9, xMax - xMin) * (W - m.l - m.r), y = v => m.t + (1 - (v - lo) / (hi - lo)) * (H - m.t - m.b);
+  let g = '';
+  for (let v = 0; v <= hi + 1e-9; v += 0.5) g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)" stroke-width="${v === 1 ? 1.5 : 1}"/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${v.toFixed(1)}</text>`;
+  const unit = plan ? (INFO[state.alg].budgetUnit || 'simulaciones') : pob ? 'generaciones' : 'partidas';
+  if (plan) bud.forEach(b => { g += `<text x="${x(Math.log10(b))}" y="${H - 6}" text-anchor="middle">${b}</text>`; });
+  else g += `<text x="${m.l}" y="${H - 6}">0</text><text x="${W - m.r}" y="${H - 6}" text-anchor="end">${xMax.toLocaleString('es-AR')} ${unit}</text>`;
+  refs.forEach(([name, v]) => { g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--ref)" stroke-width="1" stroke-dasharray="4 4" opacity=".7"/><text class="lbl" x="${W - m.r + 6}" y="${y(v) + 4}">${name}</text>`; });
+  const path = pts => pts.map((p, i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join('');
+  if (tr.length > 1) g += `<path d="${path(tr)}" fill="none" stroke="var(--ghost)" stroke-width="1.5"/>`;
+  if (ev.length > 1) g += `<path d="${path(ev)}" fill="none" stroke="var(--s1)" stroke-width="2"/>`;
+  ev.forEach(p => { g += `<circle cx="${x(p[0])}" cy="${y(p[1])}" r="3.5" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>${plan ? Math.round(10 ** p[0]) : p[0]} ${unit}: índice ${p[1].toFixed(2)}</title></circle>`; });
+  if (ev.length) { const p = ev[ev.length - 1]; g += `<text class="lbl" x="${W - m.r + 6}" y="${y(p[1]) + 4}">${p[1].toFixed(2)}</text>`; }
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Curva de aprendizaje">${g}</svg>`;
+}
+
+function boardHTML(v) {
+  return `<div class="board">${v.rows.map((r, k) => `<span>fila ${k + 1}: ${r.map(s => AB[s]).join(' ')}</span>`).join('')}</div>
+    <p class="stat">Mano: <b>${esc(handText(v.hand))}</b> · colección: ${esc(handText(v.col))} · ${v.nOpp} rivales</p>`;
+}
+
+function renderTree(v) {
+  $('viewTitle').textContent = 'Cómo piensa una jugada';
+  const snaps = v.snaps;
+  if (thinkAt < 0 || thinkAt >= snaps.length) thinkAt = snaps.length - 1;
+  const sn = snaps[thinkAt], samples = v.mode === 'samples';
+  const vals = sn.cands.map(c => c[2]).filter(x => x != null), mn = Math.min(0, ...vals), mx = Math.max(0.01, ...vals);
+  const maxN = Math.max(1, ...sn.cands.map(c => c[1]));
+  const bestNow = samples ? sn.cands.reduce((b, c) => c[2] > b[2] ? c : b, sn.cands[0])[0] : sn.cands.reduce((b, c) => c[1] > b[1] ? c : b, sn.cands[0])[0];
+  const rows = sn.cands.map(([a, n, mean]) => `
+    <div class="row ${a === bestNow ? 'best' : ''}"><b class="card">${esc(describeAction(a, v.hand))}</b><div class="vbar"><i style="width:${((samples ? (mean - mn) / (mx - mn) : n / maxN) * 100).toFixed(1)}%"></i></div>
+    <span>${samples ? `valor <b>${mean.toFixed(3)}</b>` : `<b>${n}</b> sim. · ${mean == null ? 'sin probar' : `valor ${mean.toFixed(3)}`}`}</span></div>`).join('');
+  $('view').innerHTML = `${boardHTML(v)}
+    <p class="stat">${samples ? 'Manos imaginadas por jugada:' : 'Movete por la búsqueda:'}</p>
+    <div class="seg" id="thinkSeg">${snaps.map((s2, i) => `<button type="button" data-ti="${i}" aria-pressed="${i === thinkAt}">${s2.it}</button>`).join('')}</div>
+    <div class="tree">${rows}</div>
+    <p class="stat">Con ${sn.it} ${samples ? (sn.it === 1 ? 'mano imaginada' : 'manos imaginadas') : 'simulaciones'} jugaría <b>${esc(describeAction(bestNow, v.hand))}</b>${thinkAt === snaps.length - 1 ? '' : ` (al final eligió <b>${esc(describeAction(v.best, v.hand))}</b>)`}.</p>
+    <button type="button" class="btn secondary" id="thinkBtn">Otra situación</button>`;
+  $('viewHint').textContent = samples ? 'Cada barra es el valor promedio de esa jugada en las manos imaginadas (una vuelta de mesa y la evaluación del Experto): la más larga gana. Con pocas manos los promedios saltan mucho; con más se estabilizan.' : 'Cada barra es cuántas simulaciones recibió esa jugada; a la derecha, el valor promedio que obtuvo. Al principio reparte entre todas; con UCB se va concentrando en las que parecen mejores, aunque la favorita puede cambiar a medida que junta más evidencia.';
+}
+
+function renderView(v, pob) {
+  if (v && v.kind === 'tree') { renderTree(v); return; }
+  if (pob) {
+    $('viewTitle').textContent = state.alg === 'ga' ? 'La población, generación por generación' : 'Los hijos de cada generación';
+    const hist = state.popHist;
+    if (!hist.length) { $('view').innerHTML = '<p class="hint">Tocá Entrenar para ver nacer la primera generación.</p>'; $('viewHint').textContent = ''; return; }
+    const W = Math.max(300, $('view').clientWidth || 600), H = 220, m = { l: 36, r: 16, t: 10, b: 26 };
+    const all = hist.flatMap(h => h.fit);
+    const lo = 0, hi = Math.max(1, Math.ceil(Math.max(...all) * 2) / 2);
+    const g0 = hist[0].gen, g1 = Math.max(hist[hist.length - 1].gen, g0 + 1);
+    const x = gen => m.l + (gen - g0) / (g1 - g0) * (W - m.l - m.r), y = f => m.t + (1 - (f - lo) / (hi - lo)) * (H - m.t - m.b);
+    let s = '';
+    for (let f = lo; f <= hi + 1e-9; f += 0.5) s += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(f)}" y2="${y(f)}" stroke="var(--grid)"/><text x="${m.l - 6}" y="${y(f) + 4}" text-anchor="end">${f.toFixed(1)}</text>`;
+    hist.forEach(h => h.fit.forEach((f, i) => {
+      const surv = state.alg === 'ga' && i < h.survivors.length;
+      s += `<circle cx="${x(h.gen)}" cy="${y(f)}" r="${surv ? 3.5 : 2.5}" fill="${surv ? 'var(--accent)' : 'var(--ghost)'}" opacity="${surv ? 1 : .7}"/>`;
+    }));
+    s += `<path d="${hist.map((h, i) => `${i ? 'L' : 'M'}${x(h.gen)},${y(h.parentFit)}`).join('')}" fill="none" stroke="var(--s1)" stroke-width="2"/>`;
+    s += `<text x="${m.l}" y="${H - 6}">gen. ${g0}</text><text x="${W - m.r}" y="${H - 6}" text-anchor="end">gen. ${g1}</text>`;
+    const lin = state.alg === 'ga' && hist[hist.length - 1].lineage ? `<p class="stat">${esc(hist[hist.length - 1].lineage)}.</p>` : '';
+    $('view').innerHTML = `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Fitness de cada hijo por generación">${s}</svg></div>${lin}` + weightBars(v.w, 'Pesos del mejor (cuánto le gusta cada característica)');
+    $('viewHint').textContent = state.alg === 'ga'
+      ? 'Cada punto es un individuo (fitness = índice de victorias en las partidas de esa generación; con tan pocas partidas salta mucho). Verde: la élite que sobrevive intacta. Azul: el mejor de cada generación.'
+      : 'Cada punto gris es un hijo mutado del padre; ninguno sobrevive. Azul: el padre, que se mueve hacia donde estaban los mejores hijos.';
+    return;
+  }
+  if (v.kind === 'heat') {
+    const pref = v.unit === 'preferencia';
+    $('viewTitle').textContent = pref ? 'Cuánto prefiere cada situación' : 'Cuánto cree que vale cada situación';
+    let mx = -Infinity, mn = Infinity; v.cells.forEach(r => r.forEach(c => { if (c) { mx = Math.max(mx, c[0]); mn = Math.min(mn, c[0]); } }));
+    const rows = v.cells.map((row, r) => `<tr><th scope="row">${TAKEN_LABEL[r]}</th>${row.map(c => {
+      if (!c) return '<td class="empty">—</td>';
+      const pct = Math.round((c[0] - mn) / Math.max(mx - mn, 0.001) * 100);
+      return `<td class="${pct > 55 ? 'strong' : ''}" style="background:color-mix(in oklab, var(--heat-hi) ${pct}%, var(--heat-lo))" title="${c[1]} visitas">${c[0].toFixed(2)}<small>${c[1] > 999 ? (c[1] / 1000).toFixed(0) + 'k' : c[1]}</small></td>`;
+    }).join('')}</tr>`).join('');
+    $('view').innerHTML = `<div class="scroll"><table class="heat"><thead><tr><th></th>${READY_LABEL.map(r => `<th scope="col">${r}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div><p class="stat">${v.states} situaciones distintas vistas. Escala de color: de ${isFinite(mn) ? mn.toFixed(2) : 0} (claro) a ${isFinite(mx) ? mx.toFixed(2) : 0} (verde, la que más le gusta).</p>`;
+    $('viewHint').textContent = pref
+      ? 'Preferencia promedio de cada tipo de jugada (no es un valor: sólo importa cuál es más alta). Filas: cuántos pájaros se lleva; columnas: qué bandada podría formar después.'
+      : ['bandido', 'ucb', 'optimista'].includes(state.alg)
+      ? 'Cuánto espera mejorar hasta su próxima jugada según cuántos pájaros se lleva (filas) y qué bandada podría formar después (columnas). El número chico son las veces que la vio. Debería aprender que llevarse muchos pájaros y poder formar bandada vale más.'
+      : 'Probabilidad de ganar la partida que estima desde esa jugada. Filas: cuántos pájaros se lleva; columnas: qué bandada podría formar después. El número chico son las veces que la vio.';
+    return;
+  }
+  const imp = v.unit === 'importancia';
+  $('viewTitle').textContent = imp ? 'Qué características usa más la red' : 'Cuánto le gusta cada característica';
+  $('view').innerHTML = weightBars(v.w, '') + (v.note ? `<p class="stat">${esc(v.note)}</p>` : '');
+  $('viewHint').textContent = imp
+    ? 'Una red no tiene un peso por característica: cada una entra a 24 neuronas. La barra suma cuánto pesa cada característica en total (|peso de entrada| × |peso de salida| de cada neurona). Se muestran las 14 que más usa.'
+    : 'Azul: características que lo hacen preferir una jugada. Rojo: las que lo alejan. Se muestran las 14 de más peso; las que son iguales para todas las jugadas de un turno (como cuántas cartas tiene) no cambian qué elige.';
+}
+
+function weightBars(w, title) {
+  const idx = w.map((v, i) => [Math.abs(v), i]).sort((a, b) => b[0] - a[0]).slice(0, 14).map(x => x[1]);
+  const mx = Math.max(1e-6, ...idx.map(i => Math.abs(w[i])));
+  return `${title ? `<p class="stat">${esc(title)}</p>` : ''}<div class="bars">${idx.map(i => {
+    const pct = Math.abs(w[i]) / mx * 50, pos = w[i] >= 0;
+    return `<div class="bar"><span title="${esc(FEATURE_NAMES[i])}">${esc(FEATURE_NAMES[i])}</span><div class="track"><i style="${pos ? `left:50%;width:${pct}%` : `right:50%;width:${pct}%`};background:var(${pos ? '--pos' : '--neg'})"></i></div><b>${w[i] > 0 ? '+' : ''}${w[i].toFixed(2)}</b></div>`;
+  }).join('')}</div>`;
+}
+
+function renderSlow(slow) {
+  $('slowCard').hidden = false;
+  $('slowSummary').textContent = `${slow.won ? 'Ganó' : 'Perdió'} la partida (mesa de ${slow.n}, ${slow.turns} turnos en total). ` +
+    (state.alg === 'ismcts' ? 'No aprende: en cada jugada vuelve a simular desde cero. En cada candidata, cuántas simulaciones recibió y su valor promedio.'
+      : state.alg === 'experto' ? 'No aprende: en cada jugada vuelve a imaginar manos desde cero. En cada candidata, su valor promedio en lo que imaginó.'
+      : state.alg === 'exit' ? 'Juega el experto (la búsqueda); en cada candidata, cuántas simulaciones le dio. Mientras tanto el aprendiz se corrige para parecerse.'
+      : `Mientras jugaba, también aprendía: abajo de cada jugada está la cuenta que hizo. r es lo que ganó hasta su próxima jugada${['bandido', 'ucb', 'optimista', 'bandido_lineal'].includes(state.alg) || state.algType === 'pesos' ? ' (cambio de potencial, y 1 si ganó la partida)' : ': 1 en la última si ganó la partida, 0 en las demás'}.`);
+  $('turns').innerHTML = slow.turns.map((t, i) => {
+    const cands = t.show.map(c => {
+      const est = c.n != null ? `${c.n} sim.${c.v == null ? '' : ` · ${c.v.toFixed(2)}`}` : c.v != null ? `vale ~${c.v.toFixed(2)}` : c.p != null ? `${Math.round(c.p * 100)}%` : '';
+      return `<div class="c ${c.a === t.a ? 'pick' : ''}"><b>${esc(describeAction(c.a, t.hand))}</b><small>${est}</small></div>`;
+    }).join('');
+    const u = t.update;
+    const upd = state.algType === 'plan' ? '' : u ? [u.k ? describeKey(u.k) : '', u.text || `antes ${u.old.toFixed(3)} → ahora ${u.newV.toFixed(3)}   (objetivo ${u.target.toFixed(3)}: ${u.how})`].filter(Boolean).join('\n')
+      : INFO[state.alg].atEnd ? (state.alg === 'ppo' ? 'Este algoritmo aprende al juntar una tanda de partidas.' : state.alg === 'lstd' ? 'Este algoritmo junta estadísticas y recalcula los pesos cada 100 partidas.' : 'Este algoritmo aprende recién al terminar la partida.') : '';
+    return `<div class="turn"><h3>Jugada ${i + 1} · ${t.nOpp} rivales</h3>
+      ${boardHTML(t)}
+      <div class="hand">${cands}</div>
+      <div class="why">Juega <b>${esc(describeAction(t.a, t.hand))}</b>${t.k ? ` (${esc(describeKey(t.k))})` : ''}: ${esc(t.why)}. r = <b>${t.r >= 0 ? '+' : ''}${t.r.toFixed(2)}</b>.</div>
+      ${upd ? `<div class="upd">${esc(upd)}</div>` : ''}</div>`;
+  }).join('');
+}
+
+// ------------------------- eventos -------------------------
+$('groups').addEventListener('click', e => { const b = e.target.closest('[data-alg]'); if (b) select(b.dataset.alg); });
+$('hp').addEventListener('input', e => {
+  const k = e.target.dataset.k; if (!k) return;
+  hp[k] = +e.target.value; $('hpv-' + k).textContent = hp[k]; store('cubirds-lab-hp-' + current, hp);
+});
+$('hp').addEventListener('change', () => reset());
+$('runBtn').addEventListener('click', () => { worker.postMessage({ type: running ? 'pause' : 'run' }); running = !running; $('runBtn').textContent = running ? 'Pausar' : 'Seguir entrenando'; });
+$('resetBtn').addEventListener('click', reset);
+$('view').addEventListener('click', e => {
+  const b = e.target.closest('[data-ti]');
+  if (b) { thinkAt = +b.dataset.ti; renderTree(state.view); return; }
+  if (e.target.closest('#thinkBtn')) { thinkAt = -1; worker.postMessage({ type: 'think' }); }
+});
+$('slowBtn').addEventListener('click', () => { worker.postMessage({ type: 'pause' }); running = false; worker.postMessage({ type: 'slow' }); });
+let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(render, 150); });
+})();
+</script>
