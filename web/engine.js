@@ -310,7 +310,7 @@
     return sim;
   }
   // Pesos de la evaluación del Experto, de una búsqueda aleatoria de 25 combinaciones.
-  const EXPERTO_W = { prog: 1.0, hand: 0.15, birds: 0.3, opp: 0.5, win: 10.0 };
+  const EXPERTO_W = { prog: 1.0, hand: 0.28, birds: 0.51, opp: 0.35, win: 12.8 };
   // Qué tan bien está p: menos bandadas por formar, mejor mano y más pájaros.
   function evaluate(g, p, w = EXPERTO_W) {
     if (g.done) return g.winners.includes(p) ? w.win : -w.win;
@@ -383,6 +383,96 @@
     afinado: valueBot(AFINADO),
   };
 
+  // ---------- características para los agentes entrenados (cubirds/rl/features.py) ----------
+  const G_DIM = 33, A_DIM = 32, DIM = G_DIM + A_DIM;
+  const sumArr = a => a.reduce((x, y) => x + y, 0);
+  function globalFeatures(g, p = g.cur) {
+    const h = g.hands[p], col = g.cols[p], x = new Float64Array(G_DIM);
+    const opp = []; for (let q = 0; q < g.n; q++) if (q !== p) opp.push(q);
+    for (let s = 0; s < NS; s++) {
+      x[s] = h[s] / BIG[s];
+      x[8 + s] = Math.min(col[s], 3) / 3;
+      x[17 + s] = Math.max(...opp.map(q => Math.min(g.cols[q][s], 3))) / 3;
+    }
+    x[16] = progress(col) / 4;
+    x[25] = Math.min(...opp.map(q => progress(g.cols[q]))) / 4;
+    x[26] = opp.reduce((a, q) => a + sumArr(g.hands[q]), 0) / opp.length / 10;
+    x[27] = sumArr(h) / 10;
+    x[28] = g.deck.length / 60;
+    x[29] = (g.n - 2) / 3;
+    x[30 + (g.phase === 'play' ? 0 : g.phase === 'draw' ? 1 : 2)] = 1;
+    return x;
+  }
+  function actionFeatures(g, a, p = g.cur) {
+    const h = g.hands[p], col = g.cols[p], x = new Float64Array(A_DIM);
+    if (a < 64) {
+      const [s, r, side] = decodePlay(a);
+      const row = g.rows[r], k = enclosed(row, s, side);
+      const taken = side === 0 ? row.slice(0, k) : row.slice(row.length - k);
+      const nh = h.slice(); nh[s] = 0;
+      for (const c of taken) nh[c]++;
+      x[s] = 1; x[8] = 1; x[9] = h[s] / BIG[s]; x[10] = k / 6;
+      for (const c of taken) x[11 + c] += 1 / BIG[c];
+      let ns = 0, nb = 0;
+      for (let t = 0; t < NS; t++) { if (nh[t] >= SMALL[t]) ns++; if (nh[t] >= BIG[t]) nb++; }
+      x[19] = ns / 3; x[20] = nb / 2;
+      x[21] = (handValue(nh, col, DEFAULT) - handValue(h, col, DEFAULT)) / 3;
+      x[22] = (handValue(nh, col, AFINADO) - handValue(h, col, AFINADO)) / 5;
+      x[23] = k === 0 ? 1 : 0;
+      x[24] = (row.length - k + h[s]) / 10;
+    } else if (a === A_DRAW) x[25] = 1;
+    else if (a === A_NODRAW) x[26] = 1;
+    else if (a === A_NOFLOCK) x[30] = 1;
+    else {
+      const s = a - A_FLOCK0, keep = h[s] >= BIG[s] ? 2 : 1;
+      const nc = col.slice(); nc[s] += keep;
+      x[s] = 1; x[27] = 1; x[28] = keep / 2;
+      x[29] = (progress(col) - progress(nc)) / 2;
+      x[31] = Math.min(nc[s], 3) / 3;
+    }
+    return x;
+  }
+  // [acciones legales, filas de DIM valores] para el jugador de turno.
+  function decision(g) {
+    const legal = g.legalActions(), gx = globalFeatures(g);
+    return [legal, legal.map(a => { const row = new Float64Array(DIM); row.set(gx); row.set(actionFeatures(g, a), G_DIM); return row; })];
+  }
+
+  // ---------- redes entrenadas (cubirds/rl/ppo.py) ----------
+  // Capas guardadas como [entrada][salida]; puntúa cada acción legal y elige la mejor.
+  function dense(x, W, b, act) {
+    const out = new Float64Array(b.length);
+    for (let j = 0; j < b.length; j++) {
+      let z = b[j];
+      for (let i = 0; i < x.length; i++) z += x[i] * W[i][j];
+      out[j] = act ? Math.tanh(z) : z;
+    }
+    return out;
+  }
+  function netLogit(P, x) { return dense(dense(dense(x, P.W1, P.b1, true), P.W2, P.b2, true), P.W3, P.b3, false)[0]; }
+  function netValue(P, gx) { return dense(dense(gx, P.V1, P.c1, true), P.V2, P.c2, false)[0]; }
+  function netAgent(model) {
+    const P = model.params;
+    return {
+      act(g) {
+        const [legal, X] = decision(g);
+        let best = 0, bz = -Infinity;
+        X.forEach((x, i) => { const z = netLogit(P, x); if (z > bz) { bz = z; best = i; } });
+        return legal[best];
+      },
+    };
+  }
+  const MODEL_KINDS = ['red'];
+  // En Node: lee web/arena/models (index.json + archivos) y le pega a cada modelo su ficha.
+  function loadModels(dir) {
+    const fs = require('fs'), path = require('path');
+    const file = path.join(dir, 'index.json');
+    if (!fs.existsSync(file)) return {};
+    const out = {};
+    for (const m of JSON.parse(fs.readFileSync(file))) out[m.id] = Object.assign(JSON.parse(fs.readFileSync(path.join(dir, m.file))), { label: m.label, family: m.family, desc: m.desc });
+    return out;
+  }
+
   // ---------- catálogo ----------
   const CATALOG = [
     { spec: 'azar', label: 'Azar', family: 'heurístico', desc: 'Elige cualquier jugada legal al azar.' },
@@ -391,16 +481,25 @@
     { spec: 'afinado', label: 'Afinado', family: 'heurístico', desc: 'Coleccionista con pesos encontrados por búsqueda aleatoria: valora mucho más completar especies que ya tiene (camino a 2 especies con 3) y robar 2 cartas.' },
     { spec: 'experto', label: 'Experto', family: 'búsqueda', desc: 'Monte Carlo: para las 6 mejores jugadas según Afinado, reparte 8 veces manos posibles a los rivales, simula una vuelta de mesa y evalúa cómo quedó contra el mejor rival.' },
   ];
-  function describe(spec) {
+  function describe(spec, models) {
     const hit = CATALOG.find(a => a.spec === spec);
     if (hit) return hit;
     const [kind, arg] = spec.split(/:(.*)/s);
+    if (MODEL_KINDS.includes(kind)) {
+      const m = models && models[arg];
+      return { spec, label: (m && m.label) || arg, family: (m && m.family) || 'rl', desc: (m && m.desc) || '' };
+    }
     if (kind === 'experto' && arg) { const [r, k = 6, h = 1] = arg.split(':').map(Number); return { spec, label: `Experto (${r}×${k}${h > 1 ? `, ${h} vueltas` : ''})`, family: 'búsqueda', desc: `Monte Carlo: ${r} simulaciones de ${h} vuelta${h > 1 ? 's' : ''} de mesa para cada una de las ${k} mejores jugadas según Afinado.` }; }
     throw new Error(`Agente desconocido: ${spec}`);
   }
   function makeAgent(spec, models) {
     const [kind, arg] = spec.split(/:(.*)/s);
     if (kind === 'experto') return arg ? experto(...arg.split(':').map(Number)) : experto();
+    if (kind === 'red') {
+      const m = models && models[arg];
+      if (!m) throw new Error(`Falta el modelo ${arg}`);
+      return netAgent(m);
+    }
     if (H[kind]) return H[kind];
     throw new Error(`Agente desconocido: ${spec}`);
   }
@@ -513,7 +612,7 @@
     const n = specs.length;
     if (n < 2) throw new Error('Elegí al menos 2 agentes');
     const varied = tableSize === 'variada';
-    const info = specs.map(describe);
+    const info = specs.map(s => describe(s, models));
     const agents = specs.map(s => makeAgent(s, models));
     const rec = Recorder(n, games);
     const t0 = Date.now(), log = [];
@@ -542,7 +641,7 @@
     const plans = Array.from({ length: repetitions }, () => randomPlan(field.length, rng, tableRange[0], tableRange[1]));
     const total = plans.reduce((acc, plan) => acc + plan.reduce((a, r) => a + r.tables.filter(s => s > 1).length, 0), 0);
     const maxRounds = Math.max(...plans.map(p => p.length));
-    const info = specs.map(describe);
+    const info = specs.map(s => describe(s, models));
     const agents = specs.map(s => makeAgent(s, models));
     const rec = Recorder(n, total);
     const reach = Array.from({ length: n }, () => new Array(maxRounds).fill(0));
@@ -604,7 +703,8 @@
 
   const api = {
     SPECIES, COUNTS, SMALL, BIG, NS, NROWS, HAND, A_NODRAW, A_DRAW, A_FLOCK0, A_NOFLOCK, NACTIONS, MAX_TABLE,
-    playAction, decodePlay, makeRng, hasWon, enclosed, takenBy, Game, progress, handValue, flockChoice, H, DEFAULT, AFINADO, coleccionistaScores, ranked, determinize, experto,
+    playAction, decodePlay, makeRng, hasWon, enclosed, takenBy, Game, progress, handValue, flockChoice, H, DEFAULT, AFINADO, coleccionistaScores, ranked, determinize, experto, evaluate, EXPERTO_W,
+    G_DIM, A_DIM, DIM, globalFeatures, actionFeatures, decision, netLogit, netValue, netAgent, modelKinds: MODEL_KINDS, loadModels,
     CATALOG, describe, makeAgent, playGame, eloUpdate, ELO_INITIAL, ELO_K, tournament, knockout, randomPlan,
   };
   root.CuBirdsEngine = api;

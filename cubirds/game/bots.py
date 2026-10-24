@@ -193,7 +193,7 @@ def determinize(g, me, rng):
 
 
 # Pesos de la evaluación del Experto (búsqueda aleatoria, ver web/engine.js).
-EXPERTO_W = dict(prog=1.0, hand=0.15, birds=0.3, opp=0.5, win=10.0)
+EXPERTO_W = dict(prog=1.0, hand=0.28, birds=0.51, opp=0.35, win=12.8)
 
 
 def evaluate(g, p, w=EXPERTO_W):

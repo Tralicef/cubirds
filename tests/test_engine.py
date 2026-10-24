@@ -113,3 +113,18 @@ def test_deterministic():
     a = play_game([Azar(), Azar(), Azar()], seed=123).log
     b = play_game([Azar(), Azar(), Azar()], seed=123).log
     assert a == b
+
+
+def test_elo_matches_js():
+    import json
+    import shutil
+    import subprocess
+    from cubirds.arena import elo
+    if not shutil.which("node"):
+        return
+    seats, ranks = [0, 1, 2, 3], [1, 0, 1, 1]
+    r = [1500.0, 1520.0, 1480.0, 1610.0]
+    elo.update(r, seats, ranks)
+    js = subprocess.run(["node", "-e", "const E=require('./web/engine.js');const r=[1500,1520,1480,1610];E.eloUpdate(r,[0,1,2,3],[1,0,1,1]);console.log(JSON.stringify(r))"],
+                        capture_output=True, text=True, check=True).stdout
+    assert [round(x, 9) for x in r] == [round(x, 9) for x in json.loads(js)]

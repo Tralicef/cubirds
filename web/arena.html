@@ -600,7 +600,7 @@ async function loadModels() {
     const idx = await fetch('arena/models/index.json').then(r => { if (!r.ok) throw 0; return r.json(); });
     for (const m of idx) {
       catalog.push({ spec: `${m.kind}:${m.id}`, label: m.label, family: m.family || 'rl', desc: m.desc });
-      models[m.id] = { file: m.file, data: null };
+      models[m.id] = { file: m.file, data: null, meta: { label: m.label, family: m.family || 'rl', desc: m.desc } };
     }
   } catch { /* sin modelos: solo bots */ }
   prefs.picked = prefs.picked.filter(s => catalog.some(a => a.spec === s));
@@ -691,7 +691,7 @@ async function run() {
     for (const s of specs) {
       const [, id] = s.split(/:(.*)/s);
       const mid = id && id.split(':')[0];
-      if (mid && models[mid] && !models[mid].data) models[mid].data = await fetch(`arena/models/${models[mid].file}`).then(r => r.json());
+      if (mid && models[mid] && !models[mid].data) models[mid].data = Object.assign(await fetch(`arena/models/${models[mid].file}`).then(r => r.json()), models[mid].meta);
     }
   } catch { return fail('No se pudieron cargar los modelos entrenados.'); }
   const modelData = Object.fromEntries(Object.entries(models).filter(([, m]) => m.data).map(([k, m]) => [k, m.data]));

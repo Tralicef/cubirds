@@ -1,0 +1,72 @@
+{
+ "updated": "2026-10-24T19:57:19.236Z",
+ "games": 3000,
+ "method": "Elo multijugador (K=32, duelos por pares: el que ganó la partida le gana a cada uno de los demás; los que no ganaron empatan entre sí) promediado sobre 50 órdenes de partidas; margen 95% por bootstrap. Mesas de 2 a 5 jugadores sorteadas en cada partida.",
+ "agents": [
+  {
+   "spec": "experto",
+   "label": "Experto",
+   "family": "búsqueda",
+   "desc": "Monte Carlo: para las 6 mejores jugadas según Afinado, reparte 8 veces manos posibles a los rivales, simula una vuelta de mesa y evalúa cómo quedó contra el mejor rival.",
+   "elo": 1574,
+   "ci": 44,
+   "games": 2098,
+   "win_rate": 0.442,
+   "win_index": 1.544,
+   "avg_birds": 7.21,
+   "avg_turns": 49
+  },
+  {
+   "spec": "afinado",
+   "label": "Afinado",
+   "family": "heurístico",
+   "desc": "Coleccionista con pesos encontrados por búsqueda aleatoria: valora mucho más completar especies que ya tiene (camino a 2 especies con 3) y robar 2 cartas.",
+   "elo": 1570,
+   "ci": 29,
+   "games": 2097,
+   "win_rate": 0.449,
+   "win_index": 1.578,
+   "avg_birds": 7.61,
+   "avg_turns": 48.9
+  },
+  {
+   "spec": "coleccionista",
+   "label": "Coleccionista",
+   "family": "heurístico",
+   "desc": "Puntúa su mano según qué tan cerca está de formar bandadas de especies que le faltan y elige la jugada que más la mejora.",
+   "elo": 1512,
+   "ci": 30,
+   "games": 2097,
+   "win_rate": 0.315,
+   "win_index": 1.096,
+   "avg_birds": 8.02,
+   "avg_turns": 49.7
+  },
+  {
+   "spec": "goloso",
+   "label": "Goloso",
+   "family": "heurístico",
+   "desc": "Se lleva la mayor cantidad de pájaros posible; a igualdad, juega menos cartas. Siempre roba y forma la bandada más grande.",
+   "elo": 1475,
+   "ci": 35,
+   "games": 2097,
+   "win_rate": 0.224,
+   "win_index": 0.782,
+   "avg_birds": 7.57,
+   "avg_turns": 49.7
+  },
+  {
+   "spec": "azar",
+   "label": "Azar",
+   "family": "heurístico",
+   "desc": "Elige cualquier jugada legal al azar.",
+   "elo": 1369,
+   "ci": 15,
+   "games": 2097,
+   "win_rate": 0,
+   "win_index": 0,
+   "avg_birds": 1.76,
+   "avg_turns": 48.3
+  }
+ ]
+}
