@@ -95,7 +95,9 @@ class Episode:
         self.me = rng.randrange(self.n)
         self.g = Game(self.n, rng.randrange(1 << 30))
         it = iter(opponents)
-        self.agents = [None if q == self.me else make_agent(next(it)) for q in range(self.n)]
+        # cada rival es el nombre de un bot o un agente ya armado (self-play)
+        self.agents = [None if q == self.me else (lambda o: make_agent(o) if isinstance(o, str) else o)(next(it))
+                       for q in range(self.n)]
         self.rules = Afinado()
         self._advance()
         self.phi = potential(self.g, self.me)

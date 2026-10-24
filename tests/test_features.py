@@ -92,3 +92,36 @@ console.log(JSON.stringify(out));
                 out.append([key_str(key(g, a)) for a in g.legal_actions()])
             g.step(bot.act(g, g.rng))
     assert out == js
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="hace falta node")
+def test_lineal_and_valor_agents_match_js(tmp_path):
+    r = np.random.default_rng(1)
+    from cubirds.rl.features import DIM
+    W1, b1, W2 = r.normal(0, 0.3, (16, DIM)), r.normal(0, 0.1, 16), r.normal(0, 1, 16)
+    w = r.normal(0, 1, DIM)
+    lin = {"kind": "lineal", "w": np.round(w, 6).tolist(), "b": 0.1}
+    val = {"kind": "valor", "W1": np.round(W1.T, 5).tolist(), "b1": np.round(b1, 5).tolist(), "W2": np.round(W2, 5).tolist(), "b2": 0.0}
+    (tmp_path / "l.json").write_text(json.dumps(lin))
+    (tmp_path / "v.json").write_text(json.dumps(val))
+    js = json.loads(subprocess.run(["node", "-e", """
+const E = require('./web/engine.js'); const fs = require('fs');
+const L = E.makeAgent('lineal:l', { l: JSON.parse(fs.readFileSync(process.argv[1])) });
+const V = E.makeAgent('valor:v', { v: JSON.parse(fs.readFileSync(process.argv[2])) });
+const out = [], g = new E.Game(4, 12), bot = E.makeAgent('goloso');
+while (!g.done && out.length < 30) {
+  if (g.phase === 'play') out.push([L.act(g, g.rng), V.act(g, g.rng)]);
+  g.step(bot.act(g, g.rng));
+}
+console.log(JSON.stringify(out));
+""", str(tmp_path / "l.json"), str(tmp_path / "v.json")], cwd=ROOT, capture_output=True, text=True, check=True).stdout)
+    Wl, bl = np.array(lin["w"]), lin["b"]
+    V1, c1, V2 = np.array(val["W1"]).T, np.array(val["b1"]), np.array(val["W2"])
+    g, bot, out = Game(4, 12), make_agent("goloso"), []
+    while not g.done and len(out) < 30:
+        if g.phase == "play":
+            legal, X = decision(g)
+            X = X.astype(np.float64)
+            out.append([legal[int(np.argmax(X @ Wl + bl))], legal[int(np.argmax(np.maximum(X @ V1.T + c1, 0) @ V2))]])
+        g.step(bot.act(g, g.rng))
+    assert out == js

@@ -494,7 +494,31 @@
       return legal[best];
     });
   }
-  const MODEL_KINDS = ['red', 'tabla'];
+  // Lineal (Parte II de S&B): puntaje w·x + b de cada jugada; robar y bandadas, como Afinado.
+  function linealAgent(model) {
+    const w = model.w, b = model.b;
+    return bot(g => {
+      const [legal, X] = decision(g);
+      let best = 0, bv = -Infinity;
+      X.forEach((x, i) => { let v = b; for (let j = 0; j < x.length; j++) v += w[j] * x[j]; if (v > bv) { bv = v; best = i; } });
+      return legal[best];
+    });
+  }
+  // Valor (TD-Gammon): red ReLU que valúa el afterstate de cada jugada.
+  function valorAgent(model) {
+    const { W1, b1, W2, b2 } = model;
+    return bot(g => {
+      const [legal, X] = decision(g);
+      let best = 0, bv = -Infinity;
+      X.forEach((x, i) => {
+        let v = b2;
+        for (let k = 0; k < b1.length; k++) { let z = b1[k]; for (let j = 0; j < x.length; j++) z += x[j] * W1[j][k]; if (z > 0) v += z * W2[k]; }
+        if (v > bv) { bv = v; best = i; }
+      });
+      return legal[best];
+    });
+  }
+  const MODEL_KINDS = ['red', 'tabla', 'lineal', 'valor'];
   // En Node: lee web/arena/models (index.json + archivos) y le pega a cada modelo su ficha.
   function loadModels(dir) {
     const fs = require('fs'), path = require('path');
@@ -530,7 +554,7 @@
     if (MODEL_KINDS.includes(kind)) {
       const m = models && models[arg];
       if (!m) throw new Error(`Falta el modelo ${arg}`);
-      return kind === 'tabla' ? tablaAgent(m) : netAgent(m);
+      return kind === 'tabla' ? tablaAgent(m) : kind === 'lineal' ? linealAgent(m) : kind === 'valor' ? valorAgent(m) : netAgent(m);
     }
     if (H[kind]) return H[kind];
     throw new Error(`Agente desconocido: ${spec}`);
@@ -736,7 +760,7 @@
   const api = {
     SPECIES, COUNTS, SMALL, BIG, NS, NROWS, HAND, A_NODRAW, A_DRAW, A_FLOCK0, A_NOFLOCK, NACTIONS, MAX_TABLE,
     playAction, decodePlay, makeRng, hasWon, enclosed, takenBy, Game, progress, handValue, flockChoice, H, DEFAULT, AFINADO, coleccionistaScores, ranked, determinize, experto, evaluate, EXPERTO_W,
-    G_DIM, A_DIM, DIM, globalFeatures, actionFeatures, decision, netLogit, netValue, netAgent, sbKey, tablaAgent, modelKinds: MODEL_KINDS, loadModels,
+    G_DIM, A_DIM, DIM, globalFeatures, actionFeatures, decision, netLogit, netValue, netAgent, sbKey, tablaAgent, linealAgent, valorAgent, modelKinds: MODEL_KINDS, loadModels,
     CATALOG, describe, makeAgent, playGame, eloUpdate, ELO_INITIAL, ELO_K, tournament, knockout, randomPlan,
   };
   root.CuBirdsEngine = api;
