@@ -383,7 +383,7 @@ async function newGame() {
   const names = shuffle(BOT_NAMES.slice());
   const pool = rivalPool().filter(a => a.spec !== 'azar');
   for (let i = 0; i < prefs.opp; i++) {
-    const r = prefs.rival === 'mezcla' ? pool[Math.random() * pool.length | 0] : (rivalPool().find(a => a.spec === prefs.rival) || pool[0]);
+    const r = rivalPool().find(a => a.spec === prefs.rival) || pool[Math.random() * pool.length | 0];
     players.push({ name: names[i], human: false, spec: r.spec, label: r.label, elo: r.elo });
   }
   try { await ensureModels(players.filter(p => p.spec).map(p => p.spec)); }
@@ -585,8 +585,9 @@ function showSetup() {
 }
 function rivalField() {
   const pool = rivalPool();
-  if (prefs.rival !== 'mezcla' && !pool.find(a => a.spec === prefs.rival)) prefs.rival = 'mezcla';
-  const opt = a => `<option value="${esc(a.spec)}" ${a.spec === prefs.rival ? 'selected' : ''}>${esc(a.label)}${a.elo ? ` · ${Math.round(a.elo)}` : ''}</option>`;
+  // si el rival guardado todavía no está (el ranking no cargó), se muestra la mezcla sin pisar la preferencia
+  const sel = pool.find(a => a.spec === prefs.rival) ? prefs.rival : 'mezcla';
+  const opt = a => `<option value="${esc(a.spec)}" ${a.spec === sel ? 'selected' : ''}>${esc(a.label)}${a.elo ? ` · ${Math.round(a.elo)}` : ''}</option>`;
   let options;
   if (RATINGS) {
     // cuatro grupos por puesto en el ranking (RATINGS viene ordenado de mayor a menor Elo)
@@ -598,12 +599,12 @@ function rivalField() {
   } else options = pool.map(opt).join('');
   const me = myElo();
   return `<div class="field"><label for="rivalSel">Contra quién</label>
-      <select id="rivalSel"><option value="mezcla" ${prefs.rival === 'mezcla' ? 'selected' : ''}>Mezcla al azar (cada rival distinto)</option>${options}</select>
+      <select id="rivalSel"><option value="mezcla" ${sel === 'mezcla' ? 'selected' : ''}>Mezcla al azar (cada rival distinto)</option>${options}</select>
       <small class="rival-info" id="rivalInfo">${rivalInfo()}</small></div>
     ${RATINGS ? `<p class="rival-info">Tu Elo estimado: <b>${me.elo}</b>${me.games ? ` · ${me.games} partida${me.games === 1 ? '' : 's'}` : ' · todavía sin partidas'}.</p>` : ''}`;
 }
 function rivalInfo() {
-  if (prefs.rival === 'mezcla') return 'Cada rival sale al azar entre los agentes de la arena (menos Azar).';
+  if (!rivalPool().find(x => x.spec === prefs.rival)) return 'Cada rival sale al azar entre los agentes de la arena (menos Azar).';
   const a = rivalPool().find(x => x.spec === prefs.rival);
   return a ? `${a.elo ? `Elo ${Math.round(a.elo)}${a.ci ? ` ± ${a.ci}` : ''}. ` : ''}${esc(a.desc || '')}` : '';
 }
