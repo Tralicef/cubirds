@@ -1,0 +1,740 @@
+<title>Arena CuBirds</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: una columna de lectura — elegir torneo, ranking Elo, evolución y cara a cara, en ese orden. */
+:root {
+  --bg: #EAF0EC;
+  --surface: #FFFFFF;
+  --ink: #17261D;
+  --muted: #5C6E62;
+  --line: #C9D7CE;
+  --grid: #E3EBE6;
+  --accent: #1F8A5B;
+  --accent-ink: #FFFFFF;
+  --ghost: #B3C4B9;
+
+  /* series: tres primeros slots de la paleta categórica validada */
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+  /* divergente: azul = va delante, rojo = va detrás, gris neutro al medio */
+  --div-pos: #2a78d6; --div-neg: #e34948; --div-mid: #f0efec;
+
+  --font-display: "Bowlby One", "Arial Black", Impact, system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101814; --surface: #1F2C25; --ink: #E9F2EC; --muted: #9DB1A4; --line: #34463B; --grid: #283830;
+    --accent: #4CC98C; --accent-ink: #0B1A12; --ghost: #4E6357;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --div-pos: #3987e5; --div-neg: #e66767; --div-mid: #383835;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101814; --surface: #1F2C25; --ink: #E9F2EC; --muted: #9DB1A4; --line: #34463B; --grid: #283830;
+  --accent: #4CC98C; --accent-ink: #0B1A12; --ghost: #4E6357;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  --div-pos: #3987e5; --div-neg: #e66767; --div-mid: #383835;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+a { color: inherit; }
+
+.wrap {
+  max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 14px 40px;
+}
+header { display: flex; align-items: center; gap: 12px; }
+.brand { font-family: var(--font-display); font-size: 24px; line-height: 1; flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+header { flex-wrap: wrap; }
+.brand svg { width: 26px; height: 26px; color: var(--accent); }
+.brand small { font-family: var(--font-body); font-size: 13px; font-weight: 700; color: var(--muted); }
+.pill-link { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 14px; font-weight: 700; font-size: 14px; text-decoration: none; }
+
+.tabs { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 4px; gap: 4px; }
+.tabs button { flex: 1; border: 0; background: transparent; border-radius: 9px; height: 40px; font-weight: 800; cursor: pointer; color: var(--muted); }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+
+.lead { margin: 0; color: var(--muted); max-width: 62ch; }
+.lead b { color: var(--ink); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 20px; line-height: 1.1; margin: 0; text-wrap: balance; }
+.eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .09em; font-weight: 800; color: var(--muted); }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.meta b { color: var(--ink); }
+
+select { width: 100%; height: 46px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); padding: 0 12px; font-weight: 700; }
+
+/* ---------- ranking ---------- */
+.board { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.board li + li { border-top: 1px solid var(--grid); }
+.board button {
+  all: unset; box-sizing: border-box; width: 100%; cursor: pointer;
+  display: grid; grid-template-columns: 26px 22px minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; padding: 10px 4px;
+  border-radius: 8px;
+}
+.board button:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.board button:focus-visible { outline: 3px solid var(--accent); outline-offset: -1px; }
+.pos { font-family: var(--font-display); color: var(--muted); font-size: 15px; text-align: center; font-variant-numeric: tabular-nums; }
+.key { width: 18px; height: 4px; border-radius: 2px; background: var(--ghost); justify-self: center; }
+.board button[aria-pressed="true"] .key { height: 4px; background: var(--k); }
+.who { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.who .nm { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fam { font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 6px; vertical-align: 2px; }
+.who .st { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; gap: 0 12px; }
+.elo { font-family: var(--font-display); font-size: 22px; font-variant-numeric: tabular-nums; text-align: right; line-height: 1; }
+.elo small { display: block; font-family: var(--font-body); font-size: 11px; color: var(--muted); font-weight: 700; margin-top: 3px; }
+.hint { font-size: 12.5px; color: var(--muted); margin: 0; }
+
+/* ---------- gráfico ---------- */
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; }
+.chart text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.chart .lbl { fill: var(--ink); font-weight: 700; font-size: 11.5px; }
+.tip {
+  position: absolute; top: 0; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(20, 10, 40, .16); padding: 8px 10px; font-size: 12px; min-width: 150px; z-index: 2;
+}
+.tip .hd { font-weight: 800; margin-bottom: 4px; }
+.tip .r { display: grid; grid-template-columns: 14px 44px minmax(0, 1fr); gap: 6px; align-items: center; }
+.tip .r i { height: 2px; border-radius: 1px; background: var(--ghost); }
+.tip .r b { font-variant-numeric: tabular-nums; text-align: right; }
+.tip .r span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- cara a cara ---------- */
+.h2h-scroll { overflow-x: auto; margin-inline: -4px; }
+.h2h { border-collapse: separate; border-spacing: 2px; font-variant-numeric: tabular-nums; font-size: 12px; }
+.h2h th { font-weight: 700; color: var(--muted); }
+.h2h thead th { width: 34px; text-align: center; font-family: var(--font-display); font-weight: 400; }
+.h2h tbody th { text-align: left; white-space: nowrap; padding-right: 8px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+.h2h tbody th span { font-family: var(--font-display); font-weight: 400; display: inline-block; width: 20px; }
+.h2h td { width: 34px; height: 30px; text-align: center; border-radius: 4px; color: var(--ink); font-weight: 700; }
+.h2h td.strong { color: #fff; }
+.h2h td.self { color: var(--muted); font-weight: 400; }
+.legend-div { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.legend-div i { flex: 0 0 120px; height: 10px; border-radius: 3px; background: linear-gradient(90deg, var(--div-neg), var(--div-mid), var(--div-pos)); }
+
+details { color: var(--muted); font-size: 14px; }
+details summary { cursor: pointer; font-weight: 700; color: var(--ink); }
+details p { margin: 8px 0 0; max-width: 62ch; }
+code { font-size: 12.5px; background: var(--bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.br-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.br-controls label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.br-controls select { height: 40px; font-size: 14px; text-transform: none; letter-spacing: 0; }
+.tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 8px; }
+.tbl { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.tbl.follow { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.tbl .sum { padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+.tbl .hd { display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.seat { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; font-size: 13px; align-items: baseline; font-variant-numeric: tabular-nums; }
+.seat span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seat b { font-weight: 800; }
+.seat.out span, .seat.out b { color: var(--muted); font-weight: 600; }
+.seat.adv span::before { content: "▲ "; color: var(--accent); font-size: 10px; }
+.seat.champ span::before { content: "★ "; color: var(--accent); }
+.seat.me span { text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.prog { padding: 0 10px 10px; overflow-x: auto; }
+.prog table { border-collapse: collapse; font-size: 11.5px; font-variant-numeric: tabular-nums; width: 100%; }
+.prog th, .prog td { padding: 2px 4px; text-align: right; white-space: nowrap; }
+.prog th { color: var(--muted); font-weight: 700; }
+.prog td:first-child, .prog th:first-child { text-align: left; max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
+.path { margin: 0; padding-left: 18px; font-size: 13.5px; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
+.path b { color: var(--ink); }
+.more { align-self: flex-start; }
+.notes { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13.5px; display: flex; flex-direction: column; gap: 4px; }
+
+/* ---------- simular ---------- */
+.group { display: flex; flex-direction: column; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 7px 12px; font-size: 13.5px; font-weight: 700; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip[aria-pressed="true"]::before { content: "✓"; font-size: 12px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 460px) { .row2 { grid-template-columns: 1fr; } }
+.seg { display: flex; background: var(--bg); border-radius: 10px; padding: 3px; gap: 3px; }
+.seg button { flex: 1; border: 0; background: transparent; border-radius: 8px; height: 36px; font-weight: 700; font-size: 14px; cursor: pointer; color: var(--muted); font-variant-numeric: tabular-nums; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper button { width: 42px; height: 42px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); font-size: 20px; font-weight: 700; cursor: pointer; }
+.stepper output { font-family: var(--font-display); font-size: 22px; min-width: 2ch; text-align: center; }
+.stepper small { color: var(--muted); }
+.run { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.btn { height: 50px; border-radius: 12px; border: 0; padding: 0 22px; font-weight: 800; font-size: 16px; cursor: pointer; background: var(--accent); color: var(--accent-ink); }
+.btn.secondary { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+.btn:disabled { opacity: .4; cursor: default; }
+.progress { flex: 1 1 160px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bar { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.err { color: var(--div-neg); font-weight: 700; margin: 0; }
+input[type=text] { height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); padding: 0 12px; font-weight: 700; font-size: 16px; letter-spacing: .04em; width: 100%; }
+.bracket { margin: 0; font-size: 13.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bracket b { color: var(--ink); }
+.bracket.bad { color: var(--div-neg); font-weight: 700; }
+.ko-scroll { overflow-x: auto; margin-inline: -4px; }
+.ko { border-collapse: separate; border-spacing: 2px; font-variant-numeric: tabular-nums; font-size: 12.5px; width: 100%; }
+.ko th { font-weight: 700; color: var(--muted); font-size: 11px; text-align: center; white-space: nowrap; padding: 0 2px 4px; }
+.ko th.l { text-align: left; }
+.ko tbody th { text-align: left; color: var(--ink); font-size: 13px; font-weight: 800; white-space: nowrap; max-width: 104px; overflow: hidden; text-overflow: ellipsis; padding-right: 6px; line-height: 1.2; }
+.ko tbody th small { display: block; font-size: 11px; font-weight: 600; color: var(--muted); }
+.ko td { text-align: center; height: 32px; min-width: 27px; border-radius: 4px; font-size: 11.5px; }
+.ko td.big { font-family: var(--font-display); font-size: 15px; text-align: right; padding-right: 6px; min-width: 46px; }
+.ko td.num { color: var(--muted); font-weight: 700; padding-inline: 6px; }
+.ko td.cell { font-weight: 700; color: var(--ink); }
+.ko td.cell.strong { color: #fff; }
+.empty { text-align: left; color: var(--muted); }
+.empty b { color: var(--ink); }
+.results { display: flex; flex-direction: column; gap: 18px; }
+.results.stale { opacity: .55; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="logo" viewBox="0 0 40 40">
+    <path d="M15 35v4M25 35v4" stroke="#2A2A2A" stroke-width="2.4" stroke-linecap="round"/>
+    <rect x="6" y="8" width="28" height="28" rx="9" fill="#5F6B7A"/><ellipse cx="20" cy="28.5" rx="9.5" ry="6.5" fill="#F0703A"/>
+    <circle cx="14" cy="17.5" r="3.2" fill="#fff"/><circle cx="26" cy="17.5" r="3.2" fill="#fff"/>
+    <circle cx="14.6" cy="18" r="1.7" fill="#16161a"/><circle cx="26.6" cy="18" r="1.7" fill="#16161a"/>
+    <path d="M17.4 21.6h5.2L20 25.8z" fill="#2A2A2A"/>
+  </symbol>
+</svg>
+
+<div class="wrap">
+  <header>
+    <div class="brand"><svg viewBox="0 0 40 40" aria-hidden="true"><use href="#logo"/></svg><span>Arena <small>CuBirds</small></span></div>
+    <a class="pill-link" href="./">Jugar</a>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tabT" aria-selected="true" aria-controls="panelT" type="button">Torneos</button>
+    <button role="tab" id="tabS" aria-selected="false" aria-controls="panelS" type="button">Simular</button>
+  </div>
+
+  <section id="panelT" role="tabpanel" aria-labelledby="tabT" class="results">
+    <p class="lead">Ligas y eliminatorias corridas con <b>todos</b> los agentes. Gana la partida el primero que junta 7 especies o 2 especies con 3 pájaros.</p>
+    <div id="tSelWrap"></div>
+    <div id="tOut" class="results"></div>
+  </section>
+
+  <section id="panelS" role="tabpanel" aria-labelledby="tabS" hidden class="results">
+    <p class="lead">Corré una liga o una eliminatoria acá mismo, en tu navegador, con los mismos agentes del ranking.</p>
+    <div class="card">
+      <div class="group" id="agentGroups"></div>
+      <div class="group"><span class="eyebrow">Formato</span><div class="seg" id="fmtSeg">
+        <button type="button" data-f="liga">Liga</button><button type="button" data-f="eliminatoria">Eliminatoria</button></div></div>
+      <div class="row2" id="ligaOpts">
+        <div class="group"><span class="eyebrow">Partidas</span><div class="seg" id="gamesSeg"></div></div>
+        <div class="group"><span class="eyebrow">Jugadores por mesa</span><div class="seg" id="tblSeg"></div><small class="hint" id="tblNote"></small></div>
+      </div>
+      <div class="group" id="koOpts" hidden>
+        <div class="group"><span class="eyebrow">Entradas por agente</span>
+          <div class="stepper"><button type="button" id="entMinus" aria-label="Menos entradas">−</button><output id="entOut">6</output><button type="button" id="entPlus" aria-label="Más entradas">+</button></div></div>
+        <div class="group"><span class="eyebrow">Repeticiones</span><div class="seg" id="repSeg"></div></div>
+        <p class="bracket" id="koPreview"></p>
+      </div>
+      <div class="run">
+        <button class="btn" type="button" id="runBtn">Correr liga</button>
+        <button class="btn secondary" type="button" id="stopBtn" hidden>Detener</button>
+        <div class="progress" id="prog" hidden><div class="bar"><i id="progBar"></i></div><span id="progTxt"></span></div>
+      </div>
+      <p class="err" id="simErr" hidden></p>
+    </div>
+    <div id="sOut" class="results"></div>
+  </section>
+</div>
+
+<script src="engine.js"></script>
+<script>
+(() => {
+'use strict';
+const E = window.CuBirdsEngine;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const FAMILY = { 'heurístico': 'Heurístico', 'búsqueda': 'Búsqueda', rl: 'RL', sb: 'S&B' };
+const SLOTS = ['--s1', '--s2', '--s3'];
+const fmtPct = x => `${(x * 100).toFixed(x >= 0.1 || x === 0 ? 0 : 1)}%`;
+const load = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+// ======================= vista de resultados =======================
+// Cada vista recuerda qué agentes están resaltados (máx. 3). El color sigue al
+// agente mientras está resaltado, no a su puesto.
+function ResultsView(container) {
+  let result = null, hl = [], touched = false;
+  // estado de la vista "ronda por ronda" (sobrevive a los re-render en vivo)
+  const br = { rep: 0, round: 0, follow: -1, onlyFollow: true, gamesShown: 24, open: new Set() };
+  const slotOf = id => hl.indexOf(id);
+
+  function defaultHighlight() {
+    if (touched && hl.every(id => result.agents[id])) return;
+    hl = result.agents.slice().sort((a, b) => b.elo - a.elo).slice(0, 3).map(a => a.id);
+  }
+  function toggle(id) {
+    touched = true;
+    if (hl.includes(id)) hl = hl.filter(x => x !== id);
+    else { if (hl.length >= 3) hl.shift(); hl.push(id); }
+    // conserva el slot de los que siguen resaltados
+    render(result, true);
+  }
+
+  function render(r, keepHl = false) {
+    const fresh = !result || result.id !== r.id || result.engine !== r.engine;
+    result = r;
+    if (fresh && !keepHl) { touched = false; Object.assign(br, { rep: 0, round: 0, follow: -1, gamesShown: 24 }); br.open.clear(); }
+    if (!keepHl) defaultHighlight();
+    const ranked = r.agents.slice().sort((a, b) => b.elo - a.elo);
+    const played = r.played ?? r.config.games;
+    const created = new Date(r.created);
+    const ko = r.format === 'eliminatoria';
+    container.innerHTML = `
+      ${ko ? knockoutCard(r) : ''}
+      <div class="card">
+        <div><div class="eyebrow">Ranking Elo</div><h2>${esc(ko ? 'Elo con todas las partidas' : r.name)}</h2></div>
+        <div class="meta"><span><b>${played}</b>${played !== r.config.games ? ` de ${r.config.games}` : ''} partidas</span>${ko ? '' : `<span>mesas de <b>${r.config.table_size === 'variada' ? '2 a 5' : r.config.table_size}</b></span>`}
+          <span>motor <b>${r.engine === 'python' ? 'Python' : 'JavaScript'}</b></span><span>${r.seconds} s</span>
+          <span>${created.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })} ${created.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span></div>
+        <ol class="board">${ranked.map((a, k) => `
+          <li><button type="button" data-id="${a.id}" aria-pressed="${slotOf(a.id) >= 0}" style="--k: var(${SLOTS[Math.max(0, slotOf(a.id))]})" title="${esc(a.desc)}">
+            <span class="pos">${k + 1}</span><span class="key" aria-hidden="true"></span>
+            <span class="who"><span class="nm">${esc(a.label)}<span class="fam">${FAMILY[a.family] || a.family}</span></span>
+              <span class="st"><span>gana ${fmtPct(a.win_rate)}</span><span>índice ${a.win_index.toFixed(2)}</span><span>${a.avg_birds.toFixed(1)} pájaros/partida</span></span></span>
+            <span class="elo">${Math.round(a.elo)}<small>${a.ci ? `±${a.ci} · ` : ''}${a.games} pj</small></span>
+          </button></li>`).join('')}</ol>
+        <p class="hint">Índice: victorias sobre las esperables por azar (1 de cada n en mesas de n); más de 1 es mejor que el promedio. Tocá un agente para resaltarlo en el gráfico (hasta tres).</p>
+      </div>
+      ${ko ? bracketCard(r) : gamesCard(r)}
+      <div class="card">
+        <div><div class="eyebrow">Evolución</div><h2>Elo partida a partida</h2></div>
+        <div class="chart" data-chart></div>
+      </div>
+      <div class="card">
+        <div><div class="eyebrow">Cara a cara</div><h2>¿Quién termina delante de quién?</h2></div>
+        <p class="hint">Duelos ganados por el agente de la fila contra el de la columna en las partidas que compartieron: gana el duelo si ganó la partida, y si ninguno de los dos ganó es medio punto. Los números de columna son los puestos del ranking.</p>
+        <div class="h2h-scroll">${h2hTable(r, ranked)}</div>
+        <div class="legend-div"><span>detrás</span><i></i><span>delante</span></div>
+      </div>
+      ${r.notes && r.notes.length ? `<div class="card"><div class="eyebrow">Notas</div><ul class="notes">${r.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul></div>` : ''}
+      <details><summary>Cómo se calcula el Elo</summary>
+        <p>Todos arrancan en 1500. Cada partida se separa en duelos de a pares: el que ganó la partida le gana el duelo a cada uno de los demás, y los que no ganaron empatan entre sí (medio punto). Tu Elo cambia K/(n−1) × (duelos ganados − duelos esperados), con K = ${r.config.k}. Así una partida pesa lo mismo con 2 o con 5 jugadores. La mesa se arma al azar, priorizando a los agentes que jugaron menos.</p>
+      </details>`;
+    container.querySelectorAll('.board button').forEach(b => b.addEventListener('click', () => toggle(+b.dataset.id)));
+    drawChart(container.querySelector('[data-chart]'), r);
+  }
+
+  const nameOf = (r, a, e) => `${r.agents[a].label}${r.config.entries > 1 ? ` #${e + 1}` : ''}`;
+  const champOf = t => t.adv[0];
+  // winners primero, después por pájaros en la colección
+  const orderOf = t => t.e.map((_, i) => i).sort((x, y) => (t.w.includes(y) - t.w.includes(x)) || t.b[y] - t.b[x]);
+
+  function bracketCard(r) {
+    const B = r.brackets;
+    if (!B || !B.length) return '';
+    br.rep = Math.min(br.rep, B.length - 1);
+    const rep = B[br.rep];
+    br.round = Math.min(br.round, rep.length - 1);
+    const last = rep.length - 1;
+    const champ = (() => { const f = rep[last][0]; if (!f || f.bye) return null; const i = champOf(f); return f.e[i]; })();
+    const repOpts = B.map((rp, i) => {
+      const f = rp[rp.length - 1][0]; const c = f && !f.bye ? f.e[champOf(f)] : null;
+      const shape = ` · mesas ${rp.slice(0, -1).map(t => Math.max(...t.map(x => x.e.length))).join('-')}${rp.length > 1 ? ', ' : ''}final ${rp[rp.length - 1][0].e.length}`;
+      return `<option value="${i}" ${i === br.rep ? 'selected' : ''}>Eliminatoria ${i + 1}${shape}${c ? ` · campeón ${esc(nameOf(r, c[0], c[1]))}` : ''}</option>`;
+    }).join('');
+    const roundOpts = rep.map((tabs, i) => {
+      const players = tabs.reduce((a, t) => a + t.e.length, 0);
+      const size = Math.max(...tabs.map(t => t.e.length));
+      return `<option value="${i}" ${i === br.round ? 'selected' : ''}>${i === last ? `Final · ${players} jugadores` : `Ronda ${i + 1} · ${players} jugadores en ${tabs.length} mesas de ${size}`}</option>`;
+    }).join('');
+    const followOpts = `<option value="-1">Nadie</option>` + r.agents.map(a => `<option value="${a.id}" ${a.id === br.follow ? 'selected' : ''}>${esc(a.label)}</option>`).join('');
+
+    // camino del agente seguido en esta eliminatoria
+    let path = '';
+    if (br.follow >= 0) {
+      const reached = new Map();
+      rep.forEach((tabs, ri) => tabs.forEach(t => t.e.forEach(([a, e]) => { if (a === br.follow) reached.set(e, ri); })));
+      const items = [...reached.entries()].sort((x, y) => y[1] - x[1] || x[0] - y[0]).map(([e, ri]) => {
+        const isChamp = champ && champ[0] === br.follow && champ[1] === e;
+        return `<li><b>${esc(nameOf(r, br.follow, e))}</b>: ${isChamp ? 'campeón' : ri === last ? 'llegó a la final' : `quedó afuera en la ronda ${ri + 1}`}</li>`;
+      }).join('');
+      path = `<ul class="path">${items}</ul>`;
+    }
+
+    let tabs = rep[br.round].map((t, ti) => ({ t, ti }));
+    const hasFollow = x => x.t.e.some(([a]) => a === br.follow);
+    if (br.follow >= 0 && br.onlyFollow) tabs = tabs.filter(hasFollow);
+    const cards = tabs.map(({ t, ti }) => {
+      const seats = t.e.map(([a, e]) => nameOf(r, a, e));
+      const order = t.bye ? t.e.map((_, i) => i) : orderOf(t);
+      const isFinal = br.round === last;
+      const rows = order.map(i => {
+        const [a] = t.e[i];
+        const cls = [t.bye || (t.adv || []).includes(i) ? (isFinal && i === champOf(t) ? 'champ' : isFinal ? '' : 'adv') : 'out', a === br.follow ? 'me' : ''].join(' ');
+        return `<div class="seat ${cls}"><span title="${esc(seats[i])}">${esc(seats[i])}</span><b>${t.bye ? '—' : `${t.b[i]} 🐦`}</b></div>`;
+      }).join('');
+      const key = `${br.rep}-${br.round}-${ti}`;
+      return `<div class="tbl ${br.follow >= 0 && hasFollow({ t }) ? 'follow' : ''}">
+        <div class="sum"><div class="hd"><span>${isFinal ? 'Final' : `Mesa ${ti + 1}`}</span><span>${t.bye ? 'pasa sin jugar' : `${t.t} turnos`}</span></div>${rows}</div></div>`;
+    }).join('');
+    return `<div class="card">
+        <div><div class="eyebrow">Ronda por ronda</div><h2>Mesa por mesa, quién pasa</h2></div>
+        <div class="br-controls">
+          <label>Eliminatoria<select data-br="rep">${repOpts}</select></label>
+          <label>Ronda<select data-br="round">${roundOpts}</select></label>
+          <label>Seguir a<select data-br="follow">${followOpts}</select></label>
+        </div>
+        ${champ ? `<p class="hint">Campeón de esta eliminatoria: <b>${esc(nameOf(r, champ[0], champ[1]))}</b>.</p>` : ''}
+        ${path}
+        ${br.follow >= 0 ? `<label class="hint"><input type="checkbox" data-br="only" ${br.onlyFollow ? 'checked' : ''}> Mostrar solo sus mesas</label>` : ''}
+        <div class="tables">${cards || '<p class="hint">No jugó en esta ronda.</p>'}</div>
+        <p class="hint">El ganador primero, después por pájaros en la colección. ▲ pasa a la ronda siguiente (si empatan, se sortea), ★ campeón.</p>
+      </div>`;
+  }
+
+  function gamesCard(r) {
+    const G = r.games_log;
+    if (!G || !G.length) return '';
+    const followOpts = `<option value="-1">Todas</option>` + r.agents.map(a => `<option value="${a.id}" ${a.id === br.follow ? 'selected' : ''}>${esc(a.label)}</option>`).join('');
+    let list = G.map((g, i) => ({ g, i })).reverse();
+    if (br.follow >= 0) list = list.filter(x => x.g.s.includes(br.follow));
+    const shown = list.slice(0, br.gamesShown);
+    const cards = shown.map(({ g, i }) => {
+      const seats = g.s.map(a => r.agents[a].label);
+      const order = g.s.map((_, k) => k).sort((x, y) => (g.w.includes(y) - g.w.includes(x)) || g.b[y] - g.b[x]);
+      const rows = order.map(k => `<div class="seat ${g.w.includes(k) ? 'champ' : ''} ${g.s[k] === br.follow ? 'me' : ''}"><span title="${esc(seats[k])}">${esc(seats[k])}</span><b>${g.b[k]} 🐦</b></div>`).join('');
+      return `<div class="tbl"><div class="sum"><div class="hd"><span>Partida ${i + 1}</span><span>${g.t} turnos</span></div>${rows}</div></div>`;
+    }).join('');
+    return `<div class="card">
+        <div><div class="eyebrow">Partida por partida</div><h2>Quién jugó contra quién</h2></div>
+        <div class="br-controls"><label>Agente<select data-br="follow">${followOpts}</select></label></div>
+        <p class="hint">${list.length} partida${list.length === 1 ? '' : 's'}${br.follow >= 0 ? ` de ${esc(r.agents[br.follow].label)}` : ''}, de la más reciente a la primera. ★ ganó la partida; 🐦 pájaros en la colección al terminar.</p>
+        <div class="tables">${cards}</div>
+        ${list.length > shown.length ? `<button type="button" class="btn secondary more" data-br="more">Ver ${Math.min(24, list.length - shown.length)} más</button>` : ''}
+      </div>`;
+  }
+
+  container.addEventListener('change', e => {
+    const k = e.target.dataset && e.target.dataset.br;
+    if (!k || !result) return;
+    if (k === 'rep') { br.rep = +e.target.value; br.open.clear(); }
+    if (k === 'round') { br.round = +e.target.value; br.open.clear(); }
+    if (k === 'follow') { br.follow = +e.target.value; br.gamesShown = 24; }
+    if (k === 'only') br.onlyFollow = e.target.checked;
+    render(result, true);
+  });
+  container.addEventListener('click', e => {
+    if (e.target.closest('[data-br="more"]') && result) { br.gamesShown += 24; render(result, true); }
+  });
+  container.addEventListener('toggle', e => {
+    const d = e.target; if (!d.dataset || !d.dataset.key) return;
+    if (d.open) br.open.add(d.dataset.key); else br.open.delete(d.dataset.key);
+  }, true);
+
+  function knockoutCard(r) {
+    const c = r.config, reps = c.repetitions_done ?? c.repetitions;
+    const ranked = r.agents.slice().sort((a, b) => b.title_rate - a.title_rate || b.avg_round - a.avg_round);
+    const varied = true;
+    const nr = ranked[0] ? ranked[0].reach.length : 0;
+    const last = nr;
+    // R1 se omite: todas las entradas llegan (100%). Con mesas variadas la final va en su columna.
+    const head = varied
+      ? Array.from({ length: nr }, (_, i) => i === 0 ? '' : `<th scope="col">R${i + 1}</th>`).join('') + '<th scope="col">Final</th>'
+      : c.bracket.map((b, i) => i === 0 ? '' : `<th scope="col" title="${b.players} jugadores en mesas de ${esc(b.tables.join(', '))}">${i === last ? 'Final' : `R${i + 1}`}<br>${b.players}</th>`).join('');
+    const rows = ranked.map(a => `<tr><th scope="row" title="${esc(a.label)}">${esc(a.label)}<small>ronda media ${a.avg_round.toFixed(2)}</small></th>
+      <td class="big">${fmtPct(a.title_rate)}</td>
+      ${(varied ? a.reach.concat(a.final_rate) : a.reach).map((v, i) => {
+        if (i === 0) return '';
+        const pct = Math.round(v * 100), label = `${a.label}: ${pct}% de sus entradas llegan a ${i === last ? 'la final' : 'la ronda ' + (i + 1)}`;
+        return `<td class="cell ${pct > 60 ? 'strong' : ''}" style="background:color-mix(in oklab, var(--s1) ${pct}%, var(--surface))" title="${esc(label)}" aria-label="${esc(label)}">${pct}</td>`;
+      }).join('')}</tr>`).join('');
+    return `<div class="card">
+        <div><div class="eyebrow">Eliminatoria</div><h2>${esc(r.name)}</h2></div>
+        <div class="meta"><span><b>${reps}</b>${reps !== c.repetitions ? ` de ${c.repetitions}` : ''} eliminatorias</span><span><b>${c.entries}</b> entrada${c.entries > 1 ? 's' : ''} por agente</span>
+          <span>pasa <b>el ganador</b> de cada mesa</span><span>motor <b>${r.engine === 'python' ? 'Python' : 'JavaScript'}</b></span><span>${r.seconds} s</span></div>
+        <p class="bracket">${varied
+          ? `Cada eliminatoria sortea el tamaño de mesa de cada ronda, entre <b>${(c.table_range || [2, 5])[0]}</b> y <b>${(c.table_range || [2, 5])[1]}</b> jugadores; con 5 o menos se juega la final. Mirá cada cuadro en "Ronda por ronda".`
+          : `Cuadro: ${c.bracket.map((b, i) => i === last ? `final de <b>${b.players}</b>` : `<b>${b.players}</b> en mesas de ${[...new Set(b.tables)].join(' y ')}`).join(' → ')}`}</p>
+        <div class="ko-scroll"><table class="ko">
+          <thead><tr><th class="l">Agente</th><th>Campeón</th>${head}</tr></thead>
+          <tbody>${rows}</tbody></table></div>
+        <p class="hint">Campeón: % de las eliminatorias que ganó alguna de sus entradas. Las columnas R muestran qué % de sus entradas llegó a cada ronda${varied ? '' : ' (con cuántos jugadores empieza)'}.</p>
+      </div>`;
+  }
+
+  function h2hTable(r, ranked) {
+    const { ahead, together } = r.h2h;
+    const head = ranked.map((a, k) => `<th scope="col" title="${esc(a.label)}">${k + 1}</th>`).join('');
+    const body = ranked.map((a, i) => `<tr><th scope="row" title="${esc(a.label)}"><span>${i + 1}</span>${esc(a.label)}</th>${ranked.map((b, j) => {
+      if (a.id === b.id) return '<td class="self">—</td>';
+      const n = together[a.id][b.id];
+      if (!n) return '<td class="self" title="No jugaron juntos">·</td>';
+      const v = ahead[a.id][b.id] / n, t = (v - 0.5) * 2, mag = Math.round(Math.min(1, Math.abs(t)) * 100);
+      const bg = `color-mix(in oklab, var(${t >= 0 ? '--div-pos' : '--div-neg'}) ${mag}%, var(--div-mid))`;
+      const label = `${a.label} delante de ${b.label} en ${Math.round(v * 100)}% de ${n} partidas`;
+      return `<td style="background:${bg}" class="${mag > 55 ? 'strong' : ''}" title="${esc(label)}" aria-label="${esc(label)}">${Math.round(v * 100)}</td>`;
+    }).join('')}</tr>`).join('');
+    return `<table class="h2h"><thead><tr><th></th>${head}</tr></thead><tbody>${body}</tbody></table>`;
+  }
+
+  function drawChart(host, r) {
+    const W = Math.max(280, host.clientWidth || 600), H = Math.round(Math.min(320, Math.max(220, W * 0.5)));
+    const m = { l: 38, r: 92, t: 10, b: 24 };
+    const hist = r.history;
+    if (hist.length < 2) { host.innerHTML = '<p class="hint">Todavía no hay partidas.</p>'; return; }
+    const xMax = hist[hist.length - 1][0] || 1;
+    let lo = Infinity, hi = -Infinity;
+    for (const [, rs] of hist) for (const v of rs) { if (v < lo) lo = v; if (v > hi) hi = v; }
+    const step = (hi - lo) > 400 ? 100 : 50;
+    lo = Math.floor(Math.min(lo, 1500) / step) * step; hi = Math.ceil(Math.max(hi, 1500) / step) * step;
+    const x = g => m.l + (g / xMax) * (W - m.l - m.r);
+    const y = v => m.t + (1 - (v - lo) / (hi - lo)) * (H - m.t - m.b);
+    const pathFor = id => hist.map(([g, rs], i) => `${i ? 'L' : 'M'}${x(g).toFixed(1)},${y(rs[id]).toFixed(1)}`).join('');
+
+    let grid = '';
+    for (let v = lo; v <= hi; v += step) grid += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)" stroke-width="${v === 1500 ? 1.5 : 1}"/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+    const xt = [0, Math.round(xMax / 2), xMax].map(g => `<text x="${x(g)}" y="${H - 6}" text-anchor="${g === 0 ? 'start' : g === xMax ? 'end' : 'middle'}">${g}${g === xMax ? ' pj' : ''}</text>`).join('');
+
+    const others = r.agents.filter(a => slotOf(a.id) < 0).map(a => `<path d="${pathFor(a.id)}" fill="none" stroke="var(--ghost)" stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round"/>`).join('');
+    const lit = hl.filter(id => r.agents[id]).map(id => {
+      const c = `var(${SLOTS[slotOf(id)]})`;
+      return `<path d="${pathFor(id)}" fill="none" stroke="var(--surface)" stroke-width="5" stroke-linejoin="round"/><path d="${pathFor(id)}" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    }).join('');
+
+    // etiquetas al final de las líneas resaltadas, separadas con línea guía si se pisan
+    const last = hist[hist.length - 1][1];
+    const ends = hl.filter(id => r.agents[id]).map(id => ({ id, y0: y(last[id]), y: y(last[id]) })).sort((a, b) => a.y0 - b.y0);
+    for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 14) ends[i].y = ends[i - 1].y + 14;
+    const xe = x(xMax);
+    const labels = ends.map(e => {
+      const a = r.agents[e.id], name = a.label.length > 12 ? a.label.slice(0, 11) + '…' : a.label;
+      return `<line x1="${xe + 3}" y1="${e.y0}" x2="${xe + 10}" y2="${e.y}" stroke="var(${SLOTS[slotOf(e.id)]})" stroke-width="1"/>
+        <text class="lbl" x="${xe + 13}" y="${e.y + 4}">${esc(name)}</text>`;
+    }).join('');
+
+    host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolución del Elo de cada agente a lo largo de ${xMax} partidas">
+      ${grid}${xt}${others}${lit}${labels}
+      <line data-cross x1="0" x2="0" y1="${m.t}" y2="${H - m.b}" stroke="var(--muted)" stroke-width="1" visibility="hidden"/>
+      <rect data-hit x="${m.l}" y="0" width="${W - m.l - m.r}" height="${H}" fill="transparent"/>
+    </svg><div class="tip" hidden></div>`;
+
+    const svg = host.querySelector('svg'), cross = svg.querySelector('[data-cross]'), tip = host.querySelector('.tip');
+    const show = (clientX) => {
+      const box = svg.getBoundingClientRect(), px = (clientX - box.left) * (W / box.width);
+      const g = ((px - m.l) / (W - m.l - m.r)) * xMax;
+      let best = 0; hist.forEach(([hg], i) => { if (Math.abs(hg - g) < Math.abs(hist[best][0] - g)) best = i; });
+      const [hg, rs] = hist[best], cx = x(hg);
+      cross.setAttribute('x1', cx); cross.setAttribute('x2', cx); cross.setAttribute('visibility', 'visible');
+      tip.hidden = false;
+      tip.replaceChildren();
+      const hd = document.createElement('div'); hd.className = 'hd'; hd.textContent = `Partida ${hg}`; tip.append(hd);
+      r.agents.map(a => [a, rs[a.id]]).sort((p, q) => q[1] - p[1]).forEach(([a, v]) => {
+        const row = document.createElement('div'); row.className = 'r';
+        const k = document.createElement('i'); if (slotOf(a.id) >= 0) k.style.background = `var(${SLOTS[slotOf(a.id)]})`;
+        const b = document.createElement('b'); b.textContent = Math.round(v);
+        const s = document.createElement('span'); s.textContent = a.label;
+        row.append(k, b, s); tip.append(row);
+      });
+      const tx = (cx / W) * box.width;
+      tip.style.left = `${Math.max(0, Math.min(box.width - tip.offsetWidth, tx > box.width / 2 ? tx - tip.offsetWidth - 12 : tx + 12))}px`;
+    };
+    const hide = () => { cross.setAttribute('visibility', 'hidden'); tip.hidden = true; };
+    const hit = svg.querySelector('[data-hit]');
+    hit.addEventListener('pointermove', e => show(e.clientX));
+    hit.addEventListener('pointerdown', e => show(e.clientX));
+    hit.addEventListener('pointerleave', hide);
+  }
+
+  let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => result && drawChart(container.querySelector('[data-chart]'), result), 150); });
+  return { render, setStale: s => container.classList.toggle('stale', s) };
+}
+
+// ======================= pestañas =======================
+function selectTab(which) {
+  const sim = which === 'simular';
+  $('tabT').setAttribute('aria-selected', String(!sim)); $('tabS').setAttribute('aria-selected', String(sim));
+  $('panelT').hidden = sim; $('panelS').hidden = !sim;
+  store('arena-tab', which);
+}
+$('tabT').addEventListener('click', () => selectTab('torneos'));
+$('tabS').addEventListener('click', () => selectTab('simular'));
+selectTab(location.hash === '#simular' ? 'simular' : location.hash === '#torneos' ? 'torneos' : load('arena-tab', 'torneos'));
+
+// ======================= torneos guardados =======================
+const tView = ResultsView($('tOut'));
+async function loadTournaments() {
+  try {
+    const idx = await fetch('arena/data/index.json', { cache: 'no-cache' }).then(r => { if (!r.ok) throw 0; return r.json(); });
+    if (!idx.length) throw 0;
+    $('tSelWrap').innerHTML = `<label class="eyebrow" for="tSel" style="display:block;margin-bottom:6px">Torneo</label>
+      <select id="tSel">${idx.map(t => `<option value="${esc(t.file)}">${esc(t.name)} · ${t.format === 'eliminatoria' ? 'eliminatoria' : 'liga'} · ${t.games} pj · ${new Date(t.created).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</option>`).join('')}</select>`;
+    const show = async file => { tView.setStale(true); const r = await fetch(`arena/data/${file}`).then(r => r.json()); tView.setStale(false); tView.render(r); };
+    $('tSel').addEventListener('change', e => show(e.target.value));
+    await show(idx[0].file);
+  } catch {
+    $('tOut').innerHTML = `<div class="card empty"><h2>Todavía no hay torneos guardados</h2>
+      <p>Corré uno en la compu y aparece acá después de desplegar:</p>
+      <p><code>node web/arena/rank.js 3000 azar goloso coleccionista afinado experto</code></p>
+      <p>Mientras tanto, probá la pestaña <b>Simular</b>.</p></div>`;
+  }
+}
+loadTournaments();
+
+// ======================= simular (navegador) =======================
+const sView = ResultsView($('sOut'));
+const prefs = Object.assign({ picked: ['azar', 'goloso', 'coleccionista', 'afinado', 'experto'], games: 300, table: 'variada', format: 'liga', entries: 6, reps: 10 }, load('cubirds-arena-sim', {}));
+let catalog = E.CATALOG.slice(), models = {};
+const GAMES = [100, 300, 1000, 3000];
+const REPS = [5, 10, 25, 50];
+const TABLES = [2, 3, 4, 5, 'variada'];
+
+async function loadModels() {
+  try {
+    const idx = await fetch('arena/models/index.json').then(r => { if (!r.ok) throw 0; return r.json(); });
+    for (const m of idx) {
+      catalog.push({ spec: `${m.kind}:${m.id}`, label: m.label, family: m.family || 'rl', desc: m.desc });
+      models[m.id] = { file: m.file, data: null };
+    }
+  } catch { /* sin modelos: solo bots */ }
+  prefs.picked = prefs.picked.filter(s => catalog.some(a => a.spec === s));
+  renderSimForm();
+}
+function renderSimForm() {
+  const groups = [['heurístico', 'Bots heurísticos'], ['búsqueda', 'Bots de búsqueda'], ['rl', 'Agentes entrenados (RL)'], ['sb', 'Sutton & Barto']];
+  $('agentGroups').innerHTML = groups.map(([fam, title]) => {
+    const items = catalog.filter(a => a.family === fam);
+    if (!items.length) return '';
+    return `<div class="group"><span class="eyebrow">${title}</span><div class="chips">${items.map(a =>
+      `<button type="button" class="chip" data-spec="${esc(a.spec)}" aria-pressed="${prefs.picked.includes(a.spec)}" title="${esc(a.desc)}">${esc(a.label)}</button>`).join('')}</div></div>`;
+  }).join('');
+  $('gamesSeg').innerHTML = GAMES.map(g => `<button type="button" data-g="${g}" aria-pressed="${prefs.games === g}">${g}</button>`).join('');
+  $('tblSeg').innerHTML = TABLES.map(t => `<button type="button" data-t="${t}" aria-pressed="${String(prefs.table) === String(t)}">${t === 'variada' ? '2 a 5' : t}</button>`).join('');
+  $('repSeg').innerHTML = REPS.map(g => `<button type="button" data-rep="${g}" aria-pressed="${prefs.reps === g}">${g}</button>`).join('');
+  syncTable();
+}
+function syncTable() {
+  const n = prefs.picked.length;
+  $('tblNote').textContent = prefs.table === 'variada' ? 'se sortea en cada partida' : n < prefs.table ? `quedan ${Math.max(2, n)} (agentes elegidos)` : '';
+  prefs.entries = Math.max(1, Math.min(30, prefs.entries));
+  $('entOut').textContent = prefs.entries;
+  const ko = prefs.format === 'eliminatoria';
+  $('fmtSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.f === prefs.format)));
+  $('ligaOpts').hidden = ko; $('koOpts').hidden = !ko;
+  $('runBtn').textContent = ko ? 'Correr eliminatoria' : 'Correr liga';
+  if (ko) {
+    const gamesOf = plan => plan.reduce((a, r) => a + r.tables.filter(s => s > 1).length, 0);
+    const describePlan = plan => plan.map((r, i) => i === plan.length - 1 ? `final de <b>${r.players}</b>` : `<b>${r.players}</b> en mesas de ${Math.max(...r.tables)}`).join(' → ');
+    if (n < 2) $('koPreview').textContent = 'Elegí al menos 2 agentes.';
+    else {
+      const rng = E.makeRng(Date.now() % 100000 + 1);
+      const samples = Array.from({ length: 3 }, () => E.randomPlan(n * prefs.entries, rng));
+      const avg = Math.round(Array.from({ length: 40 }, () => gamesOf(E.randomPlan(n * prefs.entries, rng))).reduce((a, b) => a + b, 0) / 40);
+      $('koPreview').innerHTML = `Pasa el ganador de cada mesa. Cada eliminatoria sortea su cuadro, por ejemplo:<br>${samples.map(describePlan).join('<br>')}<br>~${avg} partidas por eliminatoria, <b>~${avg * prefs.reps}</b> en total`;
+    }
+  }
+  $('runBtn').disabled = n < 2 || running;
+  store('cubirds-arena-sim', prefs);
+}
+$('agentGroups').addEventListener('click', e => {
+  const b = e.target.closest('[data-spec]'); if (!b) return;
+  const s = b.dataset.spec;
+  prefs.picked = prefs.picked.includes(s) ? prefs.picked.filter(x => x !== s) : prefs.picked.concat(s);
+  b.setAttribute('aria-pressed', String(prefs.picked.includes(s)));
+  syncTable();
+});
+$('gamesSeg').addEventListener('click', e => {
+  const b = e.target.closest('[data-g]'); if (!b) return;
+  prefs.games = +b.dataset.g;
+  $('gamesSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  syncTable();
+});
+$('tblSeg').addEventListener('click', e => {
+  const b = e.target.closest('[data-t]'); if (!b) return;
+  prefs.table = b.dataset.t === 'variada' ? 'variada' : +b.dataset.t;
+  $('tblSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  syncTable();
+});
+$('fmtSeg').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (!b) return; prefs.format = b.dataset.f; syncTable(); });
+$('repSeg').addEventListener('click', e => {
+  const b = e.target.closest('[data-rep]'); if (!b) return;
+  prefs.reps = +b.dataset.rep;
+  $('repSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  syncTable();
+});
+$('entMinus').addEventListener('click', () => { prefs.entries--; syncTable(); });
+$('entPlus').addEventListener('click', () => { prefs.entries++; syncTable(); });
+
+let running = false, worker = null, inline = null;
+function setRunning(on) {
+  running = on;
+  $('runBtn').hidden = on; $('stopBtn').hidden = !on; $('prog').hidden = false;
+  syncTable();
+}
+function onProgress(res, done, stopped) {
+  sView.render(res);
+  const p = res.played / res.config.games;
+  $('progBar').style.width = `${(p * 100).toFixed(1)}%`;
+  $('progTxt').textContent = done ? `${stopped ? 'Detenida' : 'Terminada'}: ${res.played} partidas en ${res.seconds} s` : `${res.played} / ${res.config.games} partidas · ${res.seconds} s`;
+  if (done) setRunning(false);
+}
+async function run() {
+  $('simErr').hidden = true;
+  const specs = prefs.picked.slice();
+  try {
+    for (const s of specs) {
+      const [, id] = s.split(/:(.*)/s);
+      const mid = id && id.split(':')[0];
+      if (mid && models[mid] && !models[mid].data) models[mid].data = await fetch(`arena/models/${models[mid].file}`).then(r => r.json());
+    }
+  } catch { return fail('No se pudieron cargar los modelos entrenados.'); }
+  const modelData = Object.fromEntries(Object.entries(models).filter(([, m]) => m.data).map(([k, m]) => [k, m.data]));
+  const ko = prefs.format === 'eliminatoria';
+  const msg = ko
+    ? { type: 'run', format: 'eliminatoria', specs, entries: prefs.entries, repetitions: prefs.reps, models: modelData,
+        name: `Eliminatoria de ${specs.length * prefs.entries} jugadores` }
+    : { type: 'run', format: 'liga', specs, games: prefs.games, tableSize: prefs.table, models: modelData, name: `Liga de ${specs.length} agentes` };
+  setRunning(true);
+  try {
+    worker = new Worker('engine.js');
+    worker.onmessage = e => {
+      const d = e.data;
+      if (d.type === 'error') { fail(d.message); return; }
+      onProgress(d.result, d.type === 'done', d.stopped);
+      if (d.type === 'done') { worker.terminate(); worker = null; }
+    };
+    worker.onerror = () => { worker && worker.terminate(); worker = null; runInline(msg); };
+    worker.postMessage(msg);
+  } catch { runInline(msg); }
+}
+// Sin Web Worker (por ejemplo, abriendo el archivo local): corre en tandas cortas.
+function runInline(msg) {
+  let it, step, last = 0;
+  try { it = msg.format === 'eliminatoria' ? E.knockout(msg) : E.tournament(msg); } catch (err) { return fail(err.message); }
+  inline = { stop: false };
+  const ctl = inline;
+  const tick = () => {
+    const t = performance.now();
+    while (!(step = it.next()).done) {
+      const { g, total, snapshot } = step.value;
+      if (ctl.stop || g === total) { onProgress(snapshot(g), true, ctl.stop && g !== total); inline = null; return; }
+      if (performance.now() - last > 300) { last = performance.now(); onProgress(snapshot(g), false); }
+      if (performance.now() - t > 30) { setTimeout(tick, 0); return; }
+    }
+  };
+  tick();
+}
+function fail(m) { $('simErr').textContent = m; $('simErr').hidden = false; if (worker) { worker.terminate(); worker = null; } setRunning(false); $('prog').hidden = true; }
+$('runBtn').addEventListener('click', run);
+$('stopBtn').addEventListener('click', () => { if (worker) worker.postMessage({ type: 'stop' }); if (inline) inline.stop = true; });
+
+$('sOut').innerHTML = `<div class="card empty"><h2>Todavía no corriste ninguna liga</h2><p>Elegí al menos dos agentes y tocá <b>Correr liga</b>. Con 300 partidas tarda unos segundos (el Experto simula partidas en cada jugada y es el más lento); el ranking se va actualizando mientras juegan.</p></div>`;
+loadModels();
+})();
+</script>

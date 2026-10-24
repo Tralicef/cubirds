@@ -226,17 +226,21 @@
     const need = col.map(c => c < 3 ? Math.floor((4 - c) / 2) : 0).sort((a, b) => a - b);
     return Math.min(dist7, need[0] + need[1]);
   }
-  const speciesWeight = (col, s) => col[s] === 0 ? 1.5 : col[s] < 3 ? 1.2 : 0.6;
-  function handValue(hand, col) {
+  // Pesos de la evaluación de la mano. AFINADO salió de una búsqueda aleatoria de
+  // 150 combinaciones contra Coleccionista y Goloso: ganó 50% en mesas de 3 (lo justo es 33%).
+  const DEFAULT = { big: 2.2, small_base: 1.0, slope: 0.6, below: 0.7, w_new: 1.5, w_part: 1.2, w_done: 0.6, draw: 0.35, take: 0.05 };
+  const AFINADO = { big: 4.31, small_base: 1.37, slope: 0.495, below: 0.289, w_new: 0.946, w_part: 3.279, w_done: 0.41, draw: 0.547, take: 0.086 };
+  const speciesWeight = (col, s, P = DEFAULT) => col[s] === 0 ? P.w_new : col[s] < 3 ? P.w_part : P.w_done;
+  function handValue(hand, col, P = DEFAULT) {
     let v = 0;
     for (let s = 0; s < NS; s++) {
       const k = hand[s];
       if (!k) continue;
       let base;
-      if (k >= BIG[s]) base = 2.2;
-      else if (k >= SMALL[s]) base = 1.0 + 0.6 * (k - SMALL[s]) / (BIG[s] - SMALL[s]);
-      else base = 0.7 * k / SMALL[s];
-      v += base * speciesWeight(col, s);
+      if (k >= BIG[s]) base = P.big;
+      else if (k >= SMALL[s]) base = P.small_base + P.slope * (k - SMALL[s]) / (BIG[s] - SMALL[s]);
+      else base = P.below * k / SMALL[s];
+      v += base * speciesWeight(col, s, P);
     }
     return v;
   }
@@ -270,7 +274,83 @@
       },
     };
   }
-  const DRAW_BONUS = 0.35;
+  function coleccionistaScores(g, legal, P = DEFAULT) {
+    const h = g.hands[g.cur], col = g.cols[g.cur];
+    const base = handValue(h, col, P);
+    return legal.map(a => {
+      const [s, r, side] = decodePlay(a);
+      const taken = takenBy(g.rows[r], s, side);
+      const nh = h.slice(); nh[s] = 0;
+      for (const c of taken) nh[c]++;
+      return handValue(nh, col, P) - base + (taken.length ? P.take * taken.length : P.draw);
+    });
+  }
+  // Jugadas de mejor a peor según Coleccionista (a igual puntaje, en el orden de legal).
+  function ranked(g, legal, P = DEFAULT) {
+    const sc = coleccionistaScores(g, legal, P);
+    return legal.map((a, i) => i).sort((i, j) => sc[j] - sc[i]).map(i => legal[i]);
+  }
+  // Copia de la partida con las cartas ocultas (mazo, descarte y manos ajenas) repartidas al azar.
+  function determinize(g, me, rng) {
+    const sim = g.clone();
+    const pool = sim.deck.concat(sim.discard);
+    for (let q = 0; q < sim.n; q++) if (q !== me) for (let s = 0; s < NS; s++) for (let i = 0; i < sim.hands[q][s]; i++) pool.push(s);
+    rng.shuffle(pool);
+    let pos = 0;
+    for (let q = 0; q < sim.n; q++) {
+      if (q === me) continue;
+      const k = sim.hands[q].reduce((a, b) => a + b, 0);
+      sim.hands[q] = new Array(NS).fill(0);
+      for (const c of pool.slice(pos, pos + k)) sim.hands[q][c]++;
+      pos += k;
+    }
+    const nd = sim.discard.length;
+    sim.discard = pool.slice(pos, pos + nd);
+    sim.deck = pool.slice(pos + nd);
+    return sim;
+  }
+  // Pesos de la evaluación del Experto, de una búsqueda aleatoria de 25 combinaciones.
+  const EXPERTO_W = { prog: 1.0, hand: 0.15, birds: 0.3, opp: 0.5, win: 10.0 };
+  // Qué tan bien está p: menos bandadas por formar, mejor mano y más pájaros.
+  function evaluate(g, p, w = EXPERTO_W) {
+    if (g.done) return g.winners.includes(p) ? w.win : -w.win;
+    return -w.prog * progress(g.cols[p]) + w.hand * handValue(g.hands[p], g.cols[p], AFINADO) + w.birds * g.cols[p].reduce((a, b) => a + b, 0);
+  }
+  // Monte Carlo: para las mejores jugadas según Afinado, reparte manos posibles a los
+  // rivales, simula una vuelta de mesa con Afinado y evalúa la posición contra el mejor rival.
+  function experto(rollouts = 8, top = 6, horizon = 1) {
+    return bot((g, legal, rng) => {
+      const me = g.cur, cands = ranked(g, legal, AFINADO).slice(0, top);
+      if (cands.length === 1) return cands[0];
+      let best = cands[0], bv = null;
+      for (const a of cands) {
+        let v = 0;
+        for (let i = 0; i < rollouts; i++) {
+          const sim = determinize(g, me, rng);
+          sim.step(a);
+          const stop = sim.turn + horizon * sim.n;
+          while (!sim.done && sim.turn < stop) sim.step(H.afinado.act(sim, rng));
+          let opp = -Infinity;
+          for (let q = 0; q < sim.n; q++) if (q !== me) opp = Math.max(opp, evaluate(sim, q));
+          v += evaluate(sim, me) - EXPERTO_W.opp * opp;
+        }
+        if (bv === null || v > bv) { best = a; bv = v; }
+      }
+      return best;
+    }, (g, l, rng) => H.afinado.act(g, rng), (g, l, rng) => H.afinado.act(g, rng));
+  }
+  function valueBot(P) {
+    return bot((g, legal, rng) => {
+      const sc = coleccionistaScores(g, legal, P);
+      let best = [], bv = null;
+      legal.forEach((a, i) => {
+        const v = sc[i];
+        if (bv === null || v > bv + 1e-9) { best = [a]; bv = v; }
+        else if (v > bv - 1e-9) best.push(a);
+      });
+      return rng.pick(best);
+    });
+  }
   const H = {
     azar: bot((g, l, rng) => rng.pick(l), (g, l, rng) => rng.pick(l), (g, l, rng) => rng.pick(l)),
     goloso: bot(
@@ -299,21 +379,8 @@
         return best;
       },
     ),
-    coleccionista: bot((g, legal, rng) => {
-      const h = g.hands[g.cur], col = g.cols[g.cur];
-      const base = handValue(h, col);
-      let best = [], bv = null;
-      for (const a of legal) {
-        const [s, r, side] = decodePlay(a);
-        const taken = takenBy(g.rows[r], s, side);
-        const nh = h.slice(); nh[s] = 0;
-        for (const c of taken) nh[c]++;
-        const v = handValue(nh, col) - base + (taken.length ? 0.05 * taken.length : DRAW_BONUS);
-        if (bv === null || v > bv + 1e-9) { best = [a]; bv = v; }
-        else if (v > bv - 1e-9) best.push(a);
-      }
-      return rng.pick(best);
-    }),
+    coleccionista: valueBot(DEFAULT),
+    afinado: valueBot(AFINADO),
   };
 
   // ---------- catálogo ----------
@@ -321,14 +388,19 @@
     { spec: 'azar', label: 'Azar', family: 'heurístico', desc: 'Elige cualquier jugada legal al azar.' },
     { spec: 'goloso', label: 'Goloso', family: 'heurístico', desc: 'Se lleva la mayor cantidad de pájaros posible; a igualdad, juega menos cartas. Siempre roba y forma la bandada más grande.' },
     { spec: 'coleccionista', label: 'Coleccionista', family: 'heurístico', desc: 'Puntúa su mano según qué tan cerca está de formar bandadas de especies que le faltan y elige la jugada que más la mejora.' },
+    { spec: 'afinado', label: 'Afinado', family: 'heurístico', desc: 'Coleccionista con pesos encontrados por búsqueda aleatoria: valora mucho más completar especies que ya tiene (camino a 2 especies con 3) y robar 2 cartas.' },
+    { spec: 'experto', label: 'Experto', family: 'búsqueda', desc: 'Monte Carlo: para las 6 mejores jugadas según Afinado, reparte 8 veces manos posibles a los rivales, simula una vuelta de mesa y evalúa cómo quedó contra el mejor rival.' },
   ];
   function describe(spec) {
     const hit = CATALOG.find(a => a.spec === spec);
     if (hit) return hit;
+    const [kind, arg] = spec.split(/:(.*)/s);
+    if (kind === 'experto' && arg) { const [r, k = 6, h = 1] = arg.split(':').map(Number); return { spec, label: `Experto (${r}×${k}${h > 1 ? `, ${h} vueltas` : ''})`, family: 'búsqueda', desc: `Monte Carlo: ${r} simulaciones de ${h} vuelta${h > 1 ? 's' : ''} de mesa para cada una de las ${k} mejores jugadas según Afinado.` }; }
     throw new Error(`Agente desconocido: ${spec}`);
   }
   function makeAgent(spec, models) {
-    const [kind] = spec.split(/:(.*)/s);
+    const [kind, arg] = spec.split(/:(.*)/s);
+    if (kind === 'experto') return arg ? experto(...arg.split(':').map(Number)) : experto();
     if (H[kind]) return H[kind];
     throw new Error(`Agente desconocido: ${spec}`);
   }
@@ -532,7 +604,7 @@
 
   const api = {
     SPECIES, COUNTS, SMALL, BIG, NS, NROWS, HAND, A_NODRAW, A_DRAW, A_FLOCK0, A_NOFLOCK, NACTIONS, MAX_TABLE,
-    playAction, decodePlay, makeRng, hasWon, enclosed, takenBy, Game, progress, handValue, flockChoice, H,
+    playAction, decodePlay, makeRng, hasWon, enclosed, takenBy, Game, progress, handValue, flockChoice, H, DEFAULT, AFINADO, coleccionistaScores, ranked, determinize, experto,
     CATALOG, describe, makeAgent, playGame, eloUpdate, ELO_INITIAL, ELO_K, tournament, knockout, randomPlan,
   };
   root.CuBirdsEngine = api;

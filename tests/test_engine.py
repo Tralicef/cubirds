@@ -2,7 +2,7 @@ from cubirds.game.engine import (
     Game, Rng, play_game, play_action, has_won, NS, COUNTS, HAND,
     PLAY, DRAW, FLOCK, A_DRAW, A_NODRAW, A_FLOCK0, A_NOFLOCK,
 )
-from cubirds.game.bots import BOTS, Azar
+from cubirds.game.bots import BOTS, FAST, Azar
 
 
 def total_cards(g):
@@ -97,7 +97,7 @@ def test_win_conditions():
 
 
 def test_full_games_conserve_cards():
-    names = list(BOTS)
+    names = FAST
     for seed in range(200):
         n = 2 + seed % 4
         agents = [BOTS[names[(seed + i) % len(names)]]() for i in range(n)]

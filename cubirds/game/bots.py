@@ -18,28 +18,34 @@ def progress(col):
     return min(dist7, need[0] + need[1])
 
 
-def species_weight(col, s):
-    """Cuánto sirve una bandada de s a esta colección (1 = normal)."""
+# Pesos de la evaluación de la mano. AFINADO salió de una búsqueda aleatoria de
+# 150 combinaciones contra Coleccionista y Goloso (ver web/engine.js).
+DEFAULT = dict(big=2.2, small_base=1.0, slope=0.6, below=0.7, w_new=1.5, w_part=1.2, w_done=0.6, draw=0.35, take=0.05)
+AFINADO = dict(big=4.31, small_base=1.37, slope=0.495, below=0.289, w_new=0.946, w_part=3.279, w_done=0.41, draw=0.547, take=0.086)
+
+
+def species_weight(col, s, P=DEFAULT):
+    """Cuánto sirve una bandada de s a esta colección."""
     if col[s] == 0:
-        return 1.5
+        return P["w_new"]
     if col[s] < 3:
-        return 1.2
-    return 0.6
+        return P["w_part"]
+    return P["w_done"]
 
 
-def hand_value(hand, col):
+def hand_value(hand, col, P=DEFAULT):
     v = 0.0
     for s in range(NS):
         k = hand[s]
         if k == 0:
             continue
         if k >= BIG[s]:
-            base = 2.2
+            base = P["big"]
         elif k >= SMALL[s]:
-            base = 1.0 + 0.6 * (k - SMALL[s]) / (BIG[s] - SMALL[s])
+            base = P["small_base"] + P["slope"] * (k - SMALL[s]) / (BIG[s] - SMALL[s])
         else:
-            base = 0.7 * k / SMALL[s]
-        v += base * species_weight(col, s)
+            base = P["below"] * k / SMALL[s]
+        v += base * species_weight(col, s, P)
     return v
 
 
@@ -119,18 +125,17 @@ class Goloso(Bot):
         return max(opts, key=lambda a: (2 if h[a - A_FLOCK0] >= BIG[a - A_FLOCK0] else 1, col[a - A_FLOCK0] == 0, -a))
 
 
-DRAW_BONUS = 0.35
-
-
 class Coleccionista(Bot):
     """Elige la jugada que más mejora el valor de su mano para formar bandadas."""
     name = "coleccionista"
+    P = DEFAULT
 
-    def play(self, g, legal, rng):
+    def scores(self, g, legal):
         h = g.hands[g.cur]
         col = g.cols[g.cur]
-        base = hand_value(h, col)
-        best, bv = [], None
+        P = self.P
+        base = hand_value(h, col, P)
+        out = []
         for a in legal:
             s, r, side = decode_play(a)
             row = g.rows[r]
@@ -140,7 +145,17 @@ class Coleccionista(Bot):
             taken = row[:k] if side == 0 else row[len(row) - k:]
             for c in taken:
                 nh[c] += 1
-            v = hand_value(nh, col) - base + (0.05 * k if k else DRAW_BONUS)
+            out.append(hand_value(nh, col, P) - base + (P["take"] * k if k else P["draw"]))
+        return out
+
+    def ranked(self, g, legal):
+        """Jugadas de mejor a peor (a igual puntaje, en el orden de legal)."""
+        sc = self.scores(g, legal)
+        return [legal[i] for i in sorted(range(len(legal)), key=lambda i: -sc[i])]
+
+    def play(self, g, legal, rng):
+        best, bv = [], None
+        for a, v in zip(legal, self.scores(g, legal)):
             if bv is None or v > bv + 1e-9:
                 best, bv = [a], v
             elif v > bv - 1e-9:
@@ -148,4 +163,89 @@ class Coleccionista(Bot):
         return rng.pick(best)
 
 
-BOTS = {b.name: b for b in (Azar, Goloso, Coleccionista)}
+class Afinado(Coleccionista):
+    """Coleccionista con los pesos que encontró la búsqueda aleatoria."""
+    name = "afinado"
+    P = AFINADO
+
+
+def determinize(g, me, rng):
+    """Copia de la partida con las cartas ocultas (mazo, descarte y manos ajenas) repartidas al azar."""
+    sim = g.clone()
+    pool = list(sim.deck) + list(sim.discard)
+    for q in range(sim.n):
+        if q != me:
+            for s in range(NS):
+                pool.extend([s] * sim.hands[q][s])
+    rng.shuffle(pool)
+    pos = 0
+    for q in range(sim.n):
+        if q != me:
+            k = sum(sim.hands[q])
+            sim.hands[q] = [0] * NS
+            for c in pool[pos:pos + k]:
+                sim.hands[q][c] += 1
+            pos += k
+    nd = len(sim.discard)
+    sim.discard = pool[pos:pos + nd]
+    sim.deck = pool[pos + nd:]
+    return sim
+
+
+# Pesos de la evaluación del Experto (búsqueda aleatoria, ver web/engine.js).
+EXPERTO_W = dict(prog=1.0, hand=0.15, birds=0.3, opp=0.5, win=10.0)
+
+
+def evaluate(g, p, w=EXPERTO_W):
+    """Qué tan bien está p: menos bandadas por formar, mejor mano y más pájaros."""
+    if g.done:
+        return w["win"] if p in g.winners else -w["win"]
+    return -w["prog"] * progress(g.cols[p]) + w["hand"] * hand_value(g.hands[p], g.cols[p], AFINADO) + w["birds"] * sum(g.cols[p])
+
+
+class Experto(Bot):
+    """Monte Carlo: para las mejores jugadas según Afinado, reparte manos posibles
+    a los rivales, simula una vuelta de mesa con Afinado y evalúa la posición
+    contra el mejor rival."""
+    name = "experto"
+
+    def __init__(self, rollouts=8, top=6, horizon=1):
+        self.rollouts = rollouts
+        self.top = top
+        self.horizon = horizon
+        self.policy = Afinado()
+
+    def draw(self, g, legal, rng):
+        return self.policy.draw(g, legal, rng)
+
+    def play(self, g, legal, rng):
+        me = g.cur
+        cands = self.policy.ranked(g, legal)[:self.top]
+        if len(cands) == 1:
+            return cands[0]
+        best, bv = cands[0], None
+        for a in cands:
+            v = 0.0
+            for _ in range(self.rollouts):
+                sim = determinize(g, me, rng)
+                sim.step(a)
+                stop = sim.turn + self.horizon * sim.n
+                while not sim.done and sim.turn < stop:
+                    sim.step(self.policy.act(sim, rng))
+                opp = max(evaluate(sim, q) for q in range(sim.n) if q != me)
+                v += evaluate(sim, me) - EXPERTO_W["opp"] * opp
+            if bv is None or v > bv:
+                best, bv = a, v
+        return best
+
+
+BOTS = {b.name: b for b in (Azar, Goloso, Coleccionista, Afinado, Experto)}
+FAST = ["azar", "goloso", "coleccionista", "afinado"]
+
+
+def make_agent(spec):
+    """'goloso', 'experto', 'experto:16:8' (simulaciones por jugada : jugadas candidatas)."""
+    kind, _, arg = spec.partition(":")
+    if kind == "experto" and arg:
+        return Experto(*[int(x) for x in arg.split(":")])
+    return BOTS[kind]()

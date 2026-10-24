@@ -105,6 +105,18 @@ class Game:
         self.winners = []
         self.log = []  # eventos de la partida, para la interfaz y los tests
 
+    def clone(self):
+        g = Game.__new__(Game)
+        g.__dict__.update(self.__dict__)
+        g.deck = list(self.deck)
+        g.discard = list(self.discard)
+        g.rows = [list(r) for r in self.rows]
+        g.hands = [list(h) for h in self.hands]
+        g.cols = [list(c) for c in self.cols]
+        g.winners = list(self.winners)
+        g.log = []
+        return g
+
     # ---------- mazo ----------
     def _draw(self):
         if not self.deck:

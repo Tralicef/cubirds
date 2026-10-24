@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from cubirds.game.bots import BOTS
+from cubirds.game.bots import FAST, make_agent
 from cubirds.game.engine import Game
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -31,18 +31,23 @@ def py_log(g):
     return out
 
 
-@pytest.mark.skipif(not shutil.which("node"), reason="hace falta node")
-def test_same_games_in_python_and_js():
-    names = list(BOTS)
-    jobs = []
-    for seed in range(1, 121):
-        n = 2 + seed % 4
-        jobs.append([seed, [names[(seed * 7 + i) % len(names)] for i in range(n)]])
+def run_parity(jobs):
     res = json.loads(subprocess.run(["node", str(ROOT / "tools/js_games.js"), json.dumps(jobs)],
                                     capture_output=True, text=True, check=True).stdout)
     for (seed, specs), js in zip(jobs, res):
-        agents = [BOTS[s]() for s in specs]
+        agents = [make_agent(s) for s in specs]
         g = Game(len(specs), seed)
         while not g.done:
             g.step(agents[g.cur].act(g, g.rng))
         assert py_log(g) == js["log"], f"semilla {seed} {specs}"
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="hace falta node")
+def test_same_games_in_python_and_js():
+    names = FAST
+    run_parity([[seed, [names[(seed * 7 + i) % len(names)] for i in range(2 + seed % 4)]] for seed in range(1, 121)])
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="hace falta node")
+def test_experto_same_in_python_and_js():
+    run_parity([[1, ["experto:2:3", "goloso"]], [2, ["coleccionista", "experto:2:4", "goloso"]]])
