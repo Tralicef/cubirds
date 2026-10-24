@@ -1,0 +1,21 @@
+[project]
+name = "cubirds"
+version = "0.1.0"
+authors = [{name = "Franco Tralice"}]
+description = "CuBirds: motor, bots, aprendizaje por refuerzo y arena con Elo"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.26"]
+
+[project.optional-dependencies]
+rl = ["torch>=2.6"]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.hatch.build.targets.wheel]
+packages = ["cubirds"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
