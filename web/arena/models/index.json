@@ -257,5 +257,13 @@
   "label": "Evolutiva",
   "family": "rl",
   "desc": "La misma red por jugada que PPO, entrenada sin gradientes con estrategias evolutivas: perturba los pesos, juega y se mueve hacia las perturbaciones que ganaron más."
+ },
+ {
+  "id": "alphazero",
+  "file": "alphazero.json",
+  "kind": "red",
+  "label": "AlphaZero",
+  "family": "rl",
+  "desc": "Red por jugada entrenada estilo AlphaZero: imita las visitas de una búsqueda PUCT que reparte manos posibles en cada simulación y valúa las hojas con la misma red (6 iteraciones de autojuego, 3.600 partidas, arrancando de PPO)."
  }
 ]

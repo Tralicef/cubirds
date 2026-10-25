@@ -1,13 +1,13 @@
 [
  {
-  "id": "20261024-213136",
-  "file": "20261024-213136.json",
+  "id": "20261025-000251",
+  "file": "20261025-000251.json",
   "name": "Ranking oficial · mesas de 2 a 5",
-  "created": "2026-10-24T21:31:36.650Z",
+  "created": "2026-10-25T00:02:51.084Z",
   "engine": "browser",
   "format": "liga",
   "games": 6000,
   "table_size": "2 a 5",
-  "agents": 35
+  "agents": 37
  }
 ]

@@ -44,11 +44,13 @@ distintas o 2 especies con 3 pájaros.
 - `features.py`: cada decisión (jugar, robar, bandada) se describe con un vector global y uno por acción legal; la misma codificación está en `web/engine.js`.
 - `ppo.py`: PPO por jugada, con shaping basado en potencial (Φ = 0,1·pájaros − 0,1·bandadas que faltan).
 - `neuroevo.py`: la misma red entrenada con estrategias evolutivas.
+- `alphazero.py`: AlphaZero adaptado a información imperfecta y varios jugadores. La búsqueda (PUCT, en `web/engine.js`) reparte manos posibles con las cartas ocultas en cada simulación, guarda el valor de cada jugador en cada nodo (max^n) y valúa las hojas con la red. El autojuego corre en Node (`tools/az_selfplay.js`) y el entrenamiento en torch. Arranca de los pesos de PPO.
 - `sb/`: Sutton & Barto sobre afterstates. Tabulares (caps. 2, 5–8 y 12), aproximados (caps. 9–11 y 13) y TD-Gammon (16.1).
 
 ```bash
 python -m cubirds.rl.ppo --iters 300 --out runs/ppo
 python -m cubirds.rl.neuroevo --gens 150 --out runs/evo
+python -m cubirds.rl.alphazero --iters 8 --games 600 --sims 48 --out runs/az
 python -m cubirds.rl.sb entrenar --todos --episodios 10000 --exportar
 python tools/export_model.py runs/ppo/best.json ppo "PPO" "PPO por jugada"
 node web/arena/rank.js 4000 azar goloso coleccionista afinado experto red:ppo tabla:sb_sarsa ...
