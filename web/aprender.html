@@ -1710,7 +1710,7 @@ entrenamiento (cada vuelta):
     <div class="card">
       <h2>Cómo le fue</h2>
       <p>Con búsqueda, AlphaZero es el primero del ranking de CuBirds, unos 50 puntos de Elo arriba de PPO y LSTD. La red sola, sin buscar, juega un poco peor que PPO: aprendió a imitar visitas de una búsqueda corta y con ruido, que es una política más "repartida". Lo que se gana es que <b>red y búsqueda juntas</b> juegan mejor que cualquiera de las dos por separado.</p>
-      <p class="muted">En Toma 6 pasó al revés: la red entrenada así mejoró (es la primera de aquel ranking), pero su búsqueda no suma, porque allá la red de valor casi no aprende (cada ronda tiene muchísima varianza).</p>
+      <p class="muted">En Toma 6 costó más: al principio su búsqueda jugaba peor que la red sola, porque allá el valor (los toros que faltan en la ronda) tiene muchísima varianza y la primera red de valor miraba sólo el promedio de las cartas de la mano. Con una red de valor que mira carta por carta y 256 simulaciones, la búsqueda pasó a sumar más de un toro por ronda y quedó primera.</p>
       <div class="elos" data-elos="az:alphazero:48,red:alphazero,red:ppo,ismcts"></div>
     </div>
     <div class="next">
