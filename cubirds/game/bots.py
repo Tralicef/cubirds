@@ -169,6 +169,60 @@ class Afinado(Coleccionista):
     P = AFINADO
 
 
+# Estratega: lo que dejaron ver los mejores agentes (ver README), con pesos de una
+# búsqueda aleatoria de 160 combinaciones contra Afinado y LSTD (ver web/engine.js).
+ESTRATEGA = dict(big=3.625, small_base=1.092, slope=0.465, below=0.251, w_new=2.324, w_part=1.977, w_done=0.234, draw=0.419, take=0.077)
+RAROS = [0.106, 0.085, 0.085, 0, 0, 0, -0.149, -0.149]  # extra por cada pájaro que se lleva de cada especie
+CIERRE = 0.407  # extra por jugar sin llevarse nada y quedar listo para cerrar la ronda, según las manos ajenas
+NO_ROBA = 2  # con esta cantidad de cartas o menos no roba: vacía la mano y cierra la ronda
+
+
+class Estratega(Coleccionista):
+    """Sigue los consejos de los mejores agentes: con 2 cartas o menos no roba (cierra la
+    ronda y los demás descartan sus manos), forma también bandadas chicas de especies
+    nuevas (va a lo ancho, hacia 7 especies) y prefiere llevarse especies raras."""
+    name = "estratega"
+    P = ESTRATEGA
+
+    def scores(self, g, legal):
+        me = g.cur
+        h = g.hands[me]
+        col = g.cols[me]
+        P = self.P
+        base = hand_value(h, col, P)
+        opp_hand = sum(sum(g.hands[q]) for q in range(g.n) if q != me) / (g.n - 1)
+        out = []
+        for a in legal:
+            s, r, side = decode_play(a)
+            row = g.rows[r]
+            k = Game.enclosed(row, s, side)
+            nh = list(h)
+            nh[s] = 0
+            taken = row[:k] if side == 0 else row[len(row) - k:]
+            for c in taken:
+                nh[c] += 1
+            v = hand_value(nh, col, P) - base + (P["take"] * k if k else P["draw"])
+            for c in taken:
+                v += RAROS[c]
+            if not k and sum(nh) <= NO_ROBA:
+                v += CIERRE * opp_hand / 8
+            out.append(v)
+        return out
+
+    def draw(self, g, legal, rng):
+        return A_NODRAW if sum(g.hands[g.cur]) <= NO_ROBA else A_DRAW
+
+    def flock(self, g, legal, rng):
+        h, col = g.hands[g.cur], g.cols[g.cur]
+        a = flock_choice(h, col, legal)
+        if a != A_NOFLOCK:
+            return a
+        for a in legal:
+            if a != A_NOFLOCK and col[a - A_FLOCK0] == 0:
+                return a
+        return A_NOFLOCK
+
+
 def determinize(g, me, rng):
     """Copia de la partida con las cartas ocultas (mazo, descarte y manos ajenas) repartidas al azar."""
     sim = g.clone()
@@ -239,8 +293,8 @@ class Experto(Bot):
         return best
 
 
-BOTS = {b.name: b for b in (Azar, Goloso, Coleccionista, Afinado, Experto)}
-FAST = ["azar", "goloso", "coleccionista", "afinado"]
+BOTS = {b.name: b for b in (Azar, Goloso, Coleccionista, Afinado, Estratega, Experto)}
+FAST = ["azar", "goloso", "coleccionista", "afinado", "estratega"]
 
 
 def make_agent(spec):

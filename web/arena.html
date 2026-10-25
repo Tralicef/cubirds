@@ -588,7 +588,7 @@ async function loadTournaments() {
   } catch {
     $('tOut').innerHTML = `<div class="card empty"><h2>Todavía no hay torneos guardados</h2>
       <p>Corré uno en la compu y aparece acá después de desplegar:</p>
-      <p><code>node web/arena/rank.js 3000 azar goloso coleccionista afinado experto</code></p>
+      <p><code>node web/arena/rank.js 3000 azar goloso coleccionista afinado estratega experto</code></p>
       <p>Mientras tanto, probá la pestaña <b>Simular</b>.</p></div>`;
   }
 }
@@ -596,7 +596,7 @@ loadTournaments();
 
 // ======================= simular (navegador) =======================
 const sView = ResultsView($('sOut'));
-const prefs = Object.assign({ picked: ['azar', 'goloso', 'coleccionista', 'afinado', 'experto'], games: 300, table: 'variada', format: 'liga', entries: 6, reps: 10 }, load('cubirds-arena-sim', {}));
+const prefs = Object.assign({ picked: ['azar', 'goloso', 'coleccionista', 'afinado', 'estratega', 'experto'], games: 300, table: 'variada', format: 'liga', entries: 6, reps: 10 }, load('cubirds-arena-sim', {}));
 let catalog = E.CATALOG.slice(), models = {};
 const GAMES = [100, 300, 1000, 3000];
 const REPS = [5, 10, 25, 50];

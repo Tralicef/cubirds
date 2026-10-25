@@ -397,6 +397,28 @@
       return rng.pick(best);
     });
   }
+  // Estratega: lo que dejaron ver los mejores agentes, con pesos de una búsqueda aleatoria
+  // de 160 combinaciones contra Afinado y LSTD. RAROS: extra por cada pájaro que se lleva de
+  // cada especie; CIERRE: extra por jugar sin llevarse nada y quedar listo para cerrar la
+  // ronda, según las manos ajenas; con NO_ROBA cartas o menos no roba y cierra la ronda.
+  const ESTRATEGA = { big: 3.625, small_base: 1.092, slope: 0.465, below: 0.251, w_new: 2.324, w_part: 1.977, w_done: 0.234, draw: 0.419, take: 0.077 };
+  const RAROS = [0.106, 0.085, 0.085, 0, 0, 0, -0.149, -0.149], CIERRE = 0.407, NO_ROBA = 2;
+  function estrategaScores(g, legal) {
+    const me = g.cur, h = g.hands[me], col = g.cols[me], P = ESTRATEGA;
+    const base = handValue(h, col, P);
+    let opp = 0; for (let q = 0; q < g.n; q++) if (q !== me) opp += sumArr(g.hands[q]);
+    const oppHand = opp / (g.n - 1);
+    return legal.map(a => {
+      const [s, r, side] = decodePlay(a);
+      const taken = takenBy(g.rows[r], s, side);
+      const nh = h.slice(); nh[s] = 0;
+      for (const c of taken) nh[c]++;
+      let v = handValue(nh, col, P) - base + (taken.length ? P.take * taken.length : P.draw);
+      for (const c of taken) v += RAROS[c];
+      if (!taken.length && sumArr(nh) <= NO_ROBA) v += CIERRE * oppHand / 8;
+      return v;
+    });
+  }
   const H = {
     azar: bot((g, l, rng) => rng.pick(l), (g, l, rng) => rng.pick(l), (g, l, rng) => rng.pick(l)),
     goloso: bot(
@@ -427,6 +449,23 @@
     ),
     coleccionista: valueBot(DEFAULT),
     afinado: valueBot(AFINADO),
+    estratega: bot(
+      (g, legal, rng) => {
+        const sc = estrategaScores(g, legal);
+        let best = [], bv = null;
+        legal.forEach((a, i) => {
+          if (bv === null || sc[i] > bv + 1e-9) { best = [a]; bv = sc[i]; }
+          else if (sc[i] > bv - 1e-9) best.push(a);
+        });
+        return rng.pick(best);
+      },
+      g => sumArr(g.hands[g.cur]) <= NO_ROBA ? A_NODRAW : A_DRAW,
+      (g, legal) => {
+        const h = g.hands[g.cur], col = g.cols[g.cur], a = flockChoice(h, col, legal);
+        if (a !== A_NOFLOCK) return a;
+        return legal.find(b => b !== A_NOFLOCK && col[b - A_FLOCK0] === 0) ?? A_NOFLOCK;
+      },
+    ),
   };
 
   // ---------- características para los agentes entrenados (cubirds/rl/features.py) ----------
@@ -720,6 +759,7 @@
     { spec: 'goloso', label: 'Goloso', family: 'heurístico', desc: 'Se lleva la mayor cantidad de pájaros posible; a igualdad, juega menos cartas. Siempre roba y forma la bandada más grande.' },
     { spec: 'coleccionista', label: 'Coleccionista', family: 'heurístico', desc: 'Puntúa su mano según qué tan cerca está de formar bandadas de especies que le faltan y elige la jugada que más la mejora.' },
     { spec: 'afinado', label: 'Afinado', family: 'heurístico', desc: 'Coleccionista con pesos encontrados por búsqueda aleatoria: valora mucho más completar especies que ya tiene (camino a 2 especies con 3) y robar 2 cartas.' },
+    { spec: 'estratega', label: 'Estratega', family: 'heurístico', desc: 'Sigue los consejos que dejaron ver los mejores agentes: con 2 cartas o menos no roba (cierra la ronda y los demás descartan sus manos), forma también bandadas chicas de especies nuevas (va a lo ancho, hacia 7 especies) y prefiere llevarse especies raras.' },
     { spec: 'ismcts', label: 'ISMCTS (S&B 8.11)', family: 'búsqueda', desc: 'MCTS para información imperfecta: árbol de jugadas propias con UCB sobre manos posibles de los rivales (que juegan como Afinado), 2 jugadas de profundidad, 120 iteraciones.' },
     { spec: 'experto', label: 'Experto', family: 'búsqueda', desc: 'Monte Carlo: para las 6 mejores jugadas según Afinado, reparte 8 veces manos posibles a los rivales, simula una vuelta de mesa y evalúa cómo quedó contra el mejor rival.' },
   ];
@@ -956,7 +996,7 @@
 
   const api = {
     SPECIES, COUNTS, SMALL, BIG, NS, NROWS, HAND, A_NODRAW, A_DRAW, A_FLOCK0, A_NOFLOCK, NACTIONS, MAX_TABLE,
-    playAction, decodePlay, makeRng, hasWon, enclosed, takenBy, Game, progress, handValue, flockChoice, H, DEFAULT, AFINADO, coleccionistaScores, ranked, determinize, experto, ismcts, evaluate, EXPERTO_W,
+    playAction, decodePlay, makeRng, hasWon, enclosed, takenBy, Game, progress, handValue, flockChoice, H, DEFAULT, AFINADO, ESTRATEGA, RAROS, CIERRE, NO_ROBA, estrategaScores, coleccionistaScores, ranked, determinize, experto, ismcts, evaluate, EXPERTO_W,
     G_DIM, A_DIM, DIM, globalFeatures, actionFeatures, decision, netLogit, netValue, netAgent, sbKey, tablaAgent, linealAgent, valorAgent, prepNet, priors, azSearch, azAgent, netValues, modelKinds: MODEL_KINDS, loadModels,
     CATALOG, describe, makeAgent, playGame, eloUpdate, ELO_INITIAL, ELO_K, tournament, knockout, randomPlan,
   };

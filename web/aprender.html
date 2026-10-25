@@ -627,28 +627,45 @@ function lessonBots(root) {
     <div><div class="eyebrow">Lección 1 · antes de aprender</div><h1>Bots escritos a mano</h1></div>
     <p class="idea">Antes de que un algoritmo aprenda nada, alguien puede escribir las reglas a mano. Son la vara contra la que se mide todo lo demás. Y uno de ellos, Afinado, ya esconde una forma simple de aprender: probar pesos al azar y quedarse con los que más ganan.</p>
     <div class="card">
-      <h2>Los cuatro bots</h2>
+      <h2>Los cinco bots</h2>
       <dl class="gloss">
         <dt>Azar</dt><dd>Elige cualquier jugada legal. Sirve para saber cuánto se gana sin pensar nada.</dd>
         <dt>Goloso</dt><dd>Juega donde se lleva más pájaros; si empata, juega menos cartas. Forma siempre la bandada más grande que pueda.</dd>
         <dt>Coleccionista</dt><dd>Le pone un <b>valor a su mano</b>: por cada especie, qué tan cerca está de una bandada chica o grande, multiplicado por cuánto le sirve esa especie a su colección. Juega lo que más sube ese valor.</dd>
         <dt>Afinado</dt><dd>El mismo Coleccionista, con otros pesos: los que encontró una búsqueda al azar. Es el rival de entrenamiento más fuerte, y en todo el curso los agentes roban y forman bandadas como él.</dd>
+        <dt>Estratega</dt><dd>Se escribió al final, copiando lo que hacen los mejores agentes del curso (abajo está cómo se averiguó). Con 2 cartas o menos <b>no roba</b>: vacía la mano y cierra la ronda. Forma también bandadas chicas de especies nuevas y prefiere llevarse especies raras.</dd>
       </dl>
       <div class="calc">valor(mano) = Σ_especies  base(cartas que tiene) × peso(lo que ya colecciona)
 puntaje(jugada) = valor(mano después) − valor(mano antes) + take · pájaros que se lleva   (o + draw si no se lleva ninguno)</div>
     </div>
     <div class="card">
       <h2>Una jugada, vista por cada bot</h2>
-      <p>En una situación real, cuántos pájaros se lleva cada jugada (lo único que mira el Goloso) y el puntaje que le dan el Coleccionista y el Afinado.</p>
+      <p>En una situación real, cuántos pájaros se lleva cada jugada (lo único que mira el Goloso) y el puntaje que le dan el Coleccionista, el Afinado y el Estratega.</p>
       <div id="lb"></div>
       <div class="controls"><button class="btn secondary" type="button" id="lbnew">Otra situación</button></div>
     </div>
     <div class="card">
       <h2>Los pesos</h2>
       <p>Los del Coleccionista los elegimos a ojo. Los del Afinado salieron de probar 150 combinaciones al azar, jugando contra el Coleccionista y el Goloso en mesas de 3, y quedarse con la que más ganó.</p>
-      <div class="scroll"><table class="dec"><thead><tr><th>Peso</th><th>Qué valora</th><th>Coleccionista</th><th>Afinado</th></tr></thead><tbody>
-        ${W.map(([k, d]) => `<tr><td><code>${k}</code></td><td>${d}</td><td class="num">${fmt(E.DEFAULT[k], 3)}</td><td class="num"><b>${fmt(E.AFINADO[k], 3)}</b></td></tr>`).join('')}</tbody></table></div>
+      <div class="scroll"><table class="dec"><thead><tr><th>Peso</th><th>Qué valora</th><th>Coleccionista</th><th>Afinado</th><th>Estratega</th></tr></thead><tbody>
+        ${W.map(([k, d]) => `<tr><td><code>${k}</code></td><td>${d}</td><td class="num">${fmt(E.DEFAULT[k], 3)}</td><td class="num"><b>${fmt(E.AFINADO[k], 3)}</b></td><td class="num">${fmt(E.ESTRATEGA[k], 3)}</td></tr>`).join('')}</tbody></table></div>
       <p>Lo que descubrió la búsqueda: una especie <b>empezada</b> vale más del triple que una nueva (3,28 contra 0,95). O sea, conviene ir por "2 especies con 3 pájaros" antes que juntar 7 especies distintas. También valora más jugar sin llevarse nada para robar 2 cartas. Nadie se lo dijo: lo encontró probando.</p>
+      <p>Los del Estratega salieron de otra búsqueda igual, de 160 combinaciones, pero ya con la regla de cerrar la ronda. Y la búsqueda <b>cambió de idea</b>: ahora una especie nueva vale más que una empezada (2,32 contra 1,98). Cerrando rondas, el camino de las 7 especies se vuelve el mejor.</p>
+    </div>
+    <div class="card">
+      <h2>Lo que enseñaron los mejores agentes</h2>
+      <p>AlphaZero y PPO juegan muy distinto que Afinado. Para saber qué parte de esa diferencia los hace ganar, jugamos 3.000 partidas registrando cada jugada. Después hicimos experimentos: cambiarle <b>una sola conducta</b> a un agente y ponerlo en mesas de 3 contra dos Afinado, donde lo justo es ganar el 33%.</p>
+      <div class="scroll"><table class="dec"><thead><tr><th>Cambio</th><th>Afinado</th><th>PPO</th><th>AlphaZero + búsqueda</th></tr></thead><tbody>
+        <tr><td>Como juega normalmente</td><td class="num">33%</td><td class="num">38%</td><td class="num">46%</td></tr>
+        <tr class="best"><td>No robar con 2 cartas o menos (cerrar la ronda)</td><td class="num">43,5%</td><td class="num">52%</td><td class="num">51%</td></tr>
+        <tr><td>Robar siempre</td><td class="num">33%</td><td class="num">38%</td><td class="num">36%</td></tr>
+        <tr><td>Formar bandadas como Afinado (esperar las grandes)</td><td class="num">33%</td><td class="num">25%</td><td class="num">35%</td></tr>
+        <tr><td>Formar bandada siempre que se pueda</td><td class="num">25%</td><td class="num">38%</td><td class="num">46%</td></tr>
+      </tbody></table></div>
+      <p class="muted">Donde el cambio es lo que el agente ya hacía, se repite su número. Cada porcentaje sale de 1.500 a 20.000 partidas.</p>
+      <p><b>Cerrar la ronda</b> es lo que más pesa. Si no robás con la mano casi vacía, la vaciás en tu próximo turno: los rivales tiran todas las cartas que venían juntando y vos repartís y seguís jugando. Ninguna red lo aprendió. La búsqueda de AlphaZero lo encontró a medias (con la mano vacía no roba el 34% de las veces), y sólo eso le da 10 puntos de porcentaje: obligada a robar siempre, baja de 46% a 36%.</p>
+      <p><b>Formar bandada apenas se puede</b> es parte del estilo de AlphaZero y PPO: 6 bandadas por partida contra 3,3 de Afinado, mano más chica y victorias por 7 especies distintas. Pero no se puede trasplantar suelto: a Afinado lo empeora, porque su forma de jugar está pensada para juntar bandadas grandes. El Estratega toma la versión que sí funciona con esa forma de jugar: además de lo que haría Afinado, forma las bandadas chicas de especies que todavía no tiene.</p>
+      <p class="muted">Los modelos lineales del curso (LSTD, SARSA, Q-learning) coinciden en otra pista chica: llevarse Flamencos, Búhos y Tucanes vale más que llevarse Carriceros y Petirrojos, porque son escasos.</p>
     </div>
     <div class="card">
       <h2>Probalo: una búsqueda aleatoria en vivo</h2>
@@ -660,21 +677,21 @@ puntaje(jugada) = valor(mano después) − valor(mano antes) + take · pájaros 
       <h2>¿Esto es aprender?</h2>
       <p>Sí, pero <b>de caja negra</b>: la búsqueda no mira ninguna jugada, sólo cuántas partidas ganó cada combinación de pesos. Es la misma idea que la neuroevolución (lección 11), con 9 pesos en vez de los miles de una red. Tiene dos trampas que se ven en vivo: con pocas partidas la ganadora puede ser pura suerte (hay que volver a medirla), y sólo ajusta pesos de una fórmula que alguien escribió: nunca va a descubrir una idea que la fórmula no tenga.</p>
       <p>El resto del curso hace lo contrario: aprende <b>jugada por jugada</b>, de lo que pasó después de cada una.</p>
-      <div class="elos" data-elos="afinado,coleccionista,goloso,azar"></div>
+      <div class="elos" data-elos="estratega,afinado,coleccionista,goloso,azar"></div>
     </div>
     <div class="next"><button class="btn" type="button" data-go="2">Lección 2: el bandido ε-greedy →</button></div>`;
   function show() {
     const ep = situation(5), g = ep.g, legal = ep.legal(), hand = ep.hand();
     const take = legal.map(a => { const [s, r, side] = E.decodePlay(a); return E.enclosed(g.rows[r], s, side); });
-    const col = E.coleccionistaScores(g, legal, E.DEFAULT), af = E.coleccionistaScores(g, legal, E.AFINADO);
-    const gol = argmax(legal, (a, i) => take[i] * 100 - hand[E.decodePlay(a)[0]]), ci = argmax(col), ai = argmax(af);
+    const col = E.coleccionistaScores(g, legal, E.DEFAULT), af = E.coleccionistaScores(g, legal, E.AFINADO), es = E.estrategaScores(g, legal);
+    const gol = argmax(legal, (a, i) => take[i] * 100 - hand[E.decodePlay(a)[0]]), ci = argmax(col), ai = argmax(af), ei = argmax(es);
     const rows = orderBy(legal.length, i => af[i]).slice(0, 6);
-    for (const i of [gol, ci]) if (!rows.includes(i)) rows.push(i);
-    const who = i => [i === gol ? 'Goloso' : '', i === ci ? 'Coleccionista' : '', i === ai ? 'Afinado' : ''].filter(Boolean).join(', ');
+    for (const i of [gol, ci, ei]) if (!rows.includes(i)) rows.push(i);
+    const who = i => [i === gol ? 'Goloso' : '', i === ci ? 'Coleccionista' : '', i === ai ? 'Afinado' : '', i === ei ? 'Estratega' : ''].filter(Boolean).join(', ');
     $('lb').innerHTML = `${situationHTML(ep)}
-      <div class="scroll"><table class="dec"><thead><tr><th>Jugada</th><th>Se lleva</th><th>Coleccionista</th><th>Afinado</th><th>La elige</th></tr></thead><tbody>
-      ${rows.map(i => `<tr class="${i === ai ? 'best' : ''}"><td>${actHTML(legal[i], hand)}</td><td class="num">${take[i]}</td><td class="num">${par(col[i], 2)}</td><td class="num">${par(af[i], 2)}</td><td>${who(i)}</td></tr>`).join('')}</tbody></table></div>
-      <p class="muted">${legal.length} jugadas posibles; se muestran las 6 que más le gustan al Afinado y las elegidas por los otros. ${gol === ai && ci === ai ? 'Esta vez los tres coinciden.' : 'Los pesos distintos alcanzan para que elijan distinto.'}</p>`;
+      <div class="scroll"><table class="dec"><thead><tr><th>Jugada</th><th>Se lleva</th><th>Coleccionista</th><th>Afinado</th><th>Estratega</th><th>La elige</th></tr></thead><tbody>
+      ${rows.map(i => `<tr class="${i === ai ? 'best' : ''}"><td>${actHTML(legal[i], hand)}</td><td class="num">${take[i]}</td><td class="num">${par(col[i], 2)}</td><td class="num">${par(af[i], 2)}</td><td class="num">${par(es[i], 2)}</td><td>${who(i)}</td></tr>`).join('')}</tbody></table></div>
+      <p class="muted">${legal.length} jugadas posibles; se muestran las 6 que más le gustan al Afinado y las elegidas por los otros. ${gol === ai && ci === ai && ei === ai ? 'Esta vez los cuatro coinciden.' : 'Los pesos distintos alcanzan para que elijan distinto.'}</p>`;
   }
   // una combinación de pesos juega en mesas de 3 contra Coleccionista y Goloso (mismas semillas para todas)
   const GAMES = 60;
@@ -1709,7 +1726,7 @@ entrenamiento (cada vuelta):
     </div>
     <div class="card">
       <h2>Cómo le fue</h2>
-      <p>Con búsqueda, AlphaZero es el primero del ranking de CuBirds, unos 50 puntos de Elo arriba de PPO y LSTD. La red sola, sin buscar, juega un poco peor que PPO: aprendió a imitar visitas de una búsqueda corta y con ruido, que es una política más "repartida". Lo que se gana es que <b>red y búsqueda juntas</b> juegan mejor que cualquiera de las dos por separado.</p>
+      <p>Con búsqueda, AlphaZero es el mejor agente que aprende del ranking de CuBirds, unos 30 a 40 puntos de Elo arriba de PPO y LSTD. Sólo lo supera el Estratega, un bot escrito a mano copiando lo que hacen AlphaZero y PPO, más un truco que ninguna red aprendió del todo: cerrar la ronda (lección 1). La red sola, sin buscar, juega un poco peor que PPO: aprendió a imitar visitas de una búsqueda corta y con ruido, que es una política más "repartida". Lo que se gana es que <b>red y búsqueda juntas</b> juegan mejor que cualquiera de las dos por separado.</p>
       <p class="muted">En Toma 6 costó más: al principio su búsqueda jugaba peor que la red sola, porque allá el valor (los toros que faltan en la ronda) tiene muchísima varianza y la primera red de valor miraba sólo el promedio de las cartas de la mano. Con una red de valor que mira carta por carta y 256 simulaciones, la búsqueda pasó a sumar más de un toro por ronda y quedó primera.</p>
       <div class="elos" data-elos="az:alphazero:48,red:alphazero,red:ppo,ismcts"></div>
     </div>
