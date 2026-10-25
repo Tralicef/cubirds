@@ -1,0 +1,1686 @@
+<title>Aprender RL con CuBirds</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: un curso — índice de lecciones arriba, cada lección como una lectura con ejemplos que se pueden tocar. */
+:root {
+  --bg: #EAF0EC; --surface: #FFFFFF; --ink: #17261D; --muted: #5C6E62; --line: #C9D7CE; --soft: #F2F7F4;
+  --accent: #1F8A5B; --accent-ink: #FFFFFF; --s1: #2a78d6; --good: #1F8A5B; --bad: #C2261F; --warn: #C4532A;
+  --font-display: "Bowlby One", "Arial Black", Impact, system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101814; --surface: #1F2C25; --ink: #E9F2EC; --muted: #9DB1A4; --line: #34463B; --soft: #18231D;
+    --accent: #4CC98C; --accent-ink: #0B1A12; --s1: #3987e5; --good: #4CC98C; --bad: #FF6B61; --warn: #F08A5D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101814; --surface: #1F2C25; --ink: #E9F2EC; --muted: #9DB1A4; --line: #34463B; --soft: #18231D;
+  --accent: #4CC98C; --accent-ink: #0B1A12; --s1: #3987e5; --good: #4CC98C; --bad: #FF6B61; --warn: #F08A5D;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+a { color: inherit; }
+.wrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 14px 56px; }
+header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.brand { font-family: var(--font-display); font-size: 24px; line-height: 1; flex: 1 0 auto; white-space: nowrap; }
+.brand small { font-family: var(--font-body); font-size: 13px; font-weight: 700; color: var(--muted); }
+.pill-link { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 13px; font-weight: 700; font-size: 14px; text-decoration: none; color: inherit; }
+
+/* índice */
+.toc { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.toc button { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 30px 1fr; gap: 2px 8px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.toc button:focus-visible { outline: 3px solid var(--accent); }
+.toc button[aria-current="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.toc .n { font-family: var(--font-display); font-size: 18px; color: var(--accent); grid-row: span 2; }
+@media (max-width: 640px) {
+  .toc { display: flex; overflow-x: auto; scroll-snap-type: x proximity; padding-bottom: 4px; margin-inline: -4px; padding-inline: 4px; }
+  .toc button { flex: 0 0 200px; scroll-snap-align: start; }
+}
+.toc b { font-size: 14.5px; line-height: 1.25; }
+.toc small { color: var(--muted); font-size: 12.5px; line-height: 1.3; }
+
+/* lección */
+article { display: flex; flex-direction: column; gap: 18px; }
+.eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .09em; font-weight: 800; color: var(--muted); }
+h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(26px, 6vw, 34px); line-height: 1.05; margin: 4px 0 0; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 21px; line-height: 1.15; margin: 0; text-wrap: balance; }
+h3 { font-size: 15px; margin: 0; }
+p { margin: 0; max-width: 66ch; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.idea { border-left: 4px solid var(--accent); padding: 12px 16px; background: var(--surface); border-radius: 0 12px 12px 0; font-size: 17px; max-width: 66ch; }
+.muted { color: var(--muted); }
+dl.gloss { display: grid; grid-template-columns: minmax(110px, 160px) 1fr; gap: 10px 16px; margin: 0; }
+dl.gloss dt { font-weight: 800; }
+dl.gloss dd { margin: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 10px; } }
+ol.steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; max-width: 66ch; }
+ol.steps li::marker { font-weight: 800; color: var(--accent); }
+.code { font-family: var(--font-mono); font-size: 13px; background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; white-space: pre; line-height: 1.5; }
+.pros { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .pros { grid-template-columns: 1fr; } }
+.pros ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.pros h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.elos { display: flex; flex-direction: column; gap: 8px; }
+.next { display: flex; gap: 8px; flex-wrap: wrap; }
+a.btn { display: inline-grid; place-items: center; text-decoration: none; }
+
+/* bucle agente-entorno */
+.loop { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; }
+.loop .box { border: 2px solid var(--ink); border-radius: 14px; padding: 12px; text-align: center; background: var(--soft); }
+.loop .box b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 18px; }
+.loop .box small { color: var(--muted); }
+.loop .arrows { display: flex; flex-direction: column; gap: 10px; font-size: 13px; font-weight: 700; text-align: center; }
+.loop .arrows .to { color: var(--accent); }
+.loop .arrows .back { color: var(--s1); }
+@media (max-width: 520px) { .loop { grid-template-columns: 1fr; } .loop .arrows { flex-direction: row; justify-content: space-around; } }
+
+/* mesa y pájaros */
+.table-view { display: flex; flex-direction: column; gap: 4px; }
+.trow { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.trow .lbl { width: 46px; font-size: 12px; color: var(--muted); font-weight: 700; flex: 0 0 auto; }
+.mc { display: inline-grid; place-items: center; width: 28px; height: 34px; border-radius: 5px; background: var(--face); border: 1.5px solid var(--edge); position: relative; }
+.mc svg { width: 24px; height: 24px; }
+.mc.new { outline: 2px dashed var(--accent); outline-offset: 1px; }
+.mc.gone { opacity: .35; }
+.mc b { position: absolute; right: -5px; top: -6px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 10.5px; display: grid; place-items: center; }
+.sp0 { --face: #FDE6EF; --edge: #D9578A; } .sp1 { --face: #F3E8DC; --edge: #8A6240; } .sp2 { --face: #FFF0DE; --edge: #2C2C36; } .sp3 { --face: #FFF6D3; --edge: #C9971A; }
+.sp4 { --face: #E2F5E5; --edge: #2E8A4A; } .sp5 { --face: #E4EAF7; --edge: #2A3B66; } .sp6 { --face: #FBF3E3; --edge: #A5834F; } .sp7 { --face: #FDE6DA; --edge: #D2552A; }
+.handrow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.handrow .lbl2 { font-size: 12px; color: var(--muted); font-weight: 700; }
+.act { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+
+/* tabla de decisión */
+.scroll { overflow-x: auto; }
+table.dec { border-collapse: collapse; font-size: 14px; width: 100%; font-variant-numeric: tabular-nums; }
+table.dec th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.dec td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+table.dec td.num { text-align: right; font-weight: 700; white-space: nowrap; }
+table.dec td.sit { font-size: 13px; min-width: 200px; }
+table.dec tr.best td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+table.dec tr.chosen td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
+@media (max-width: 520px) { table.dec th, table.dec td { padding: 5px 4px; } table.dec th { letter-spacing: .03em; } .act { white-space: normal; } table.dec td.sit { min-width: 150px; } }
+
+/* paso a paso */
+.stepper { display: flex; flex-direction: column; gap: 14px; }
+.stepbar { display: flex; gap: 4px; flex-wrap: wrap; }
+.stepbar span { height: 6px; flex: 1 1 18px; border-radius: 3px; background: var(--line); }
+.stepbar span.on { background: var(--accent); }
+.step { border-left: 3px solid var(--line); padding: 2px 0 2px 14px; display: flex; flex-direction: column; gap: 8px; }
+.step.cur { border-left-color: var(--accent); }
+.step h3 { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.step h3 em { font-style: normal; font-family: var(--font-display); font-weight: 400; color: var(--accent); }
+.calc { font-family: var(--font-mono); font-size: 13px; background: var(--soft); border-radius: 10px; padding: 10px 12px; overflow-x: auto; white-space: pre-wrap; }
+.calc b { color: var(--accent); }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn { height: 44px; border-radius: 12px; border: 0; padding: 0 16px; font-weight: 800; font-size: 15px; cursor: pointer; background: var(--accent); color: var(--accent-ink); }
+.btn.secondary { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+.btn:disabled { opacity: .4; cursor: default; }
+.stat { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stat b { color: var(--ink); }
+.slider { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; flex-wrap: wrap; }
+.slider input { flex: 1; accent-color: var(--accent); max-width: 260px; min-width: 120px; }
+.coin { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; }
+.coin i { width: 30px; height: 30px; border-radius: 50%; display: inline-grid; place-items: center; font-style: normal; font-size: 11px; background: var(--accent); color: var(--accent-ink); flex: 0 0 auto; }
+.ev { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; font-size: 14.5px; }
+.ev .me { font-weight: 800; }
+.tag { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
+.bars { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.bar { display: grid; grid-template-columns: minmax(0, 1fr) 140px 54px; gap: 8px; align-items: center; }
+@media (max-width: 520px) { .bar { grid-template-columns: minmax(0, 1fr) 80px 48px; } }
+.bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar .track { position: relative; height: 10px; background: var(--soft); border-radius: 3px; }
+.bar .track i { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+.bar .track::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--muted); }
+.bar b { text-align: right; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" id="birdDefs"></svg>
+
+<div class="wrap">
+  <header>
+    <div class="brand">Aprender <small>RL con CuBirds</small></div>
+    <a class="pill-link" href="lab.html">Laboratorio</a>
+    <a class="pill-link" href="arena.html">Arena</a>
+    <a class="pill-link" href="./">Jugar</a>
+  </header>
+  <p class="lead" style="font-size:18px;max-width:60ch">Un recorrido por los algoritmos de aprendizaje por refuerzo, del más simple al más complejo. En cada lección ves <b>cómo piensa</b> el algoritmo para elegir una jugada y <b>cómo aprende</b> de lo que pasó, con partidas reales de CuBirds y las cuentas a la vista.</p>
+  <nav class="toc" id="toc" aria-label="Lecciones"></nav>
+  <article id="lesson"></article>
+</div>
+
+<script src="engine.js"></script>
+<script src="birds.js"></script>
+<script>
+(() => {
+'use strict';
+const E = window.CuBirdsEngine;
+const { SPECIES, SMALL, BIG, NS } = E;
+const PLURAL = ['Flamencos', 'Búhos', 'Tucanes', 'Patos', 'Loros', 'Urracas', 'Carriceros', 'Petirrojos'];
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const load = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const fmt = (x, d = 2) => { const v = Math.round(x * 10 ** d) / 10 ** d; return (v === 0 ? 0 : v).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: d }); };
+const par = (x, d = 3) => x < 0 ? `(${fmt(x, d)})` : fmt(x, d);
+const sum = a => a.reduce((x, y) => x + y, 0);
+const argmax = (arr, f = x => x) => { let b = 0, bv = -Infinity; arr.forEach((x, i) => { const v = f(x, i); if (v > bv) { bv = v; b = i; } }); return b; };
+CuBirdsArt.install($('birdDefs'));
+const seed = k => E.makeRng((Date.now() % 1e6) + k);
+
+// ------------------- ranking -------------------
+let RATINGS = null, MODELS = {};
+const fillElo = () => document.querySelectorAll('[data-elos]').forEach(el => { el.innerHTML = eloTable(el.dataset.elos.split(',')); });
+fetch('arena/ratings.json').then(r => r.ok ? r.json() : null).then(d => { RATINGS = d && d.agents; fillElo(); }).catch(() => {});
+async function model(id) {
+  if (MODELS[id]) return MODELS[id];
+  const idx = await fetch('arena/models/index.json').then(r => r.json());
+  const m = idx.find(x => x.id === id);
+  MODELS[id] = Object.assign(await fetch('arena/models/' + m.file).then(r => r.json()), { label: m.label });
+  return MODELS[id];
+}
+// Tabla con el Elo de los algoritmos de la lección en el ranking oficial.
+const eloTable = specs => {
+  if (!RATINGS) return '';
+  const rows = specs.map(spec => RATINGS.findIndex(a => a.spec === spec)).filter(i => i >= 0);
+  if (!rows.length) return '';
+  const af = RATINGS.find(a => a.spec === 'afinado');
+  return `<h3>En el <a href="arena.html">ranking oficial</a></h3>
+    <div class="scroll"><table class="dec"><thead><tr><th>Algoritmo</th><th>Elo</th><th>Puesto</th></tr></thead><tbody>
+    ${rows.map(i => `<tr><td>${esc(RATINGS[i].label)}</td><td class="num">${RATINGS[i].elo} ± ${RATINGS[i].ci}</td><td class="num">${i + 1} de ${RATINGS.length}</td></tr>`).join('')}</tbody></table></div>
+    <p class="muted">Liga de ${RATINGS.length} agentes con mesas de 2 a 5 jugadores. Como referencia, el bot Afinado tiene ${af ? af.elo : '—'} y el que juega al azar ${(RATINGS.find(a => a.spec === 'azar') || {}).elo || '—'}.</p>`;
+};
+
+// ------------------- piezas visuales -------------------
+const bird = (s, cls = '', n = 0) => `<span class="mc sp${s} ${cls}" title="${n > 1 ? `${n} ${PLURAL[s]}` : SPECIES[s]}"><svg viewBox="0 0 40 40"><use href="#b${s}"/></svg>${n > 1 ? `<b>${n}</b>` : ''}</span>`;
+function tableView(rows, opts = {}) {
+  return `<div class="table-view">${rows.map((r, i) => `<div class="trow"><span class="lbl">Fila ${i + 1}</span>${r.map((s, j) => {
+    const hl = opts.row === i && (opts.side === 0 ? j < opts.n : j >= r.length - opts.n);
+    return bird(s, hl ? opts.cls || 'new' : '');
+  }).join('')}</div>`).join('')}</div>`;
+}
+const countsView = (h, label) => `<div class="handrow">${label ? `<span class="lbl2">${label}</span>` : ''}${h.some(x => x) ? h.map((k, s) => k ? bird(s, '', k) : '').join('') : '<span class="muted">—</span>'}</div>`;
+function actHTML(a, hand) {
+  const [s, r, side] = E.decodePlay(a), k = hand[s];
+  return `<span class="act" title="${esc(actText(a, hand))}">${bird(s, '', k)} ${SPECIES[s]} · fila ${r + 1} ${side ? 'der.' : 'izq.'}</span>`;
+}
+const actText = (a, hand) => { const [s, r, side] = E.decodePlay(a), k = hand[s]; return `${k === 1 ? `1 ${SPECIES[s]}` : `${k} ${PLURAL[s]}`} a la ${side ? 'derecha' : 'izquierda'} de la fila ${r + 1}`; };
+
+// La "situación" (afterstate) de una jugada, en palabras. Misma clave que cubirds/rl/sb/common.py.
+const TAKEN = ['no encierra ningún pájaro (puede robar 2)', 'se lleva 1 pájaro', 'se lleva 2 pájaros', 'se lleva 3 o 4 pájaros', 'se lleva 5 o más pájaros'];
+const READY = ['no le queda ninguna bandada para formar', 'le queda una bandada chica para formar', 'le queda una bandada grande para formar'];
+const GAIN = ['', ' que no lo acerca a ganar', ' que lo acerca a ganar', ' que lo acerca mucho a ganar'];
+const PROG = ['le faltan 0 o 1 bandadas', 'le faltan 2 bandadas', 'le faltan 3 bandadas', 'le faltan 4 o más bandadas'];
+const OPP = ['al mejor rival le faltan 0 o 1', 'al mejor rival le faltan 2', 'al mejor rival le faltan 3 o más'];
+const BURN = ['juega pocas cartas', 'juega casi media bandada chica', 'juega una bandada chica entera o más'];
+const HAND = ['se queda sin cartas (ronda nueva)', 'le quedan 1 a 3 cartas', 'le quedan 4 a 7 cartas', 'le quedan 8 o más cartas'];
+const HV = ['la mano empeora', 'la mano queda igual', 'la mano mejora un poco', 'la mano mejora', 'la mano mejora mucho'];
+function describeKey(k, long = false) {
+  const [taken, ready, gain, prog, opp, burn, hand, hv] = k.split(',').map(Number);
+  const base = `${TAKEN[taken]}; ${READY[ready]}${ready ? GAIN[gain + 1] : ''}; ${HV[hv]}`;
+  return long ? `${base}; ${BURN[burn]}; ${HAND[hand]}; ${PROG[prog]}; ${OPP[opp]}` : base;
+}
+
+// ------------------- una partida desde un asiento (como cubirds/rl/sb/common.py: Episode) -------------------
+// El agente decide sólo qué pájaros juega y dónde; robar 2 y formar bandadas lo hace como Afinado.
+// Recompensa entre una jugada y la siguiente: el cambio de Φ = 0,1·pájaros − 0,1·bandadas que faltan,
+// y al terminar, 1 si ganó (menos el Φ que tenía: el total de la partida suma lo mismo que ganar o no).
+const NAMES = ['El agente', 'Hornero', 'Benteveo', 'Calandria'];
+const OPPS = ['afinado', 'coleccionista', 'goloso'];
+const BOTS = {};
+const botOf = s => BOTS[s] || (BOTS[s] = E.makeAgent(s));
+const potential = (g, p) => 0.1 * sum(g.cols[p]) - 0.1 * E.progress(g.cols[p]);
+class Episode {
+  constructor(rng, opps = OPPS) {
+    this.rng = rng;
+    this.n = opps.length + 1;
+    this.me = 0;
+    this.g = new E.Game(this.n, rng.int(2 ** 30) + 1);
+    this.g.cur = rng.int(this.n);
+    this.agents = [null, ...opps.map(botOf)];
+    this.advance();
+    this.phi = potential(this.g, 0);
+  }
+  advance() {
+    const g = this.g;
+    while (!g.done && !(g.cur === 0 && g.phase === 'play')) g.step((g.cur === 0 ? botOf('afinado') : this.agents[g.cur]).act(g, g.rng));
+  }
+  get done() { return this.g.done; }
+  legal() { return this.g.legalActions(); }
+  keys() { return this.legal().map(a => E.sbKey(this.g, a)); }
+  feats() { return E.decision(this.g)[1].map(x => Array.from(x)); }
+  hand() { return this.g.hands[0].slice(); }
+  step(i) {
+    const g = this.g, from = g.log.length, phi0 = this.phi;
+    g.step(g.legalActions()[i]);
+    this.advance();
+    let r;
+    if (g.done) r = (g.winners.includes(0) ? 1 / g.winners.length : 0) - this.phi;
+    else { const phi = potential(g, 0); r = phi - this.phi; this.phi = phi; }
+    return { r, phi0, phi1: g.done ? 0 : this.phi, events: g.log.slice(from), won: g.done && g.winners.includes(0) };
+  }
+}
+function eventsList(res) {
+  const items = res.events.map(e => {
+    const who = NAMES[e.p] || '';
+    if (e.t === 'play') return `<li class="${e.p === 0 ? 'me' : ''}">${who} jugó ${e.k} ${e.k === 1 ? SPECIES[e.s] : PLURAL[e.s]} en la fila ${e.r + 1}${e.taken.length ? ` y se llevó ${e.taken.length} pájaro${e.taken.length === 1 ? '' : 's'}` : ''}.</li>`;
+    if (e.t === 'draw') return e.got.length ? `<li class="${e.p === 0 ? 'me' : ''}">${who} robó ${e.got.length}.</li>` : '';
+    if (e.t === 'flock') return `<li class="${e.p === 0 ? 'me' : ''}">${who} formó una bandada de ${PLURAL[e.s]} (guarda ${e.keep}).</li>`;
+    if (e.t === 'round') return `<li>${who} se quedó sin cartas: ronda nueva.</li>`;
+    if (e.t === 'end') return `<li><b>Terminó la partida: ${e.winners.includes(0) ? 'ganó el agente' : `ganó ${e.winners.map(w => NAMES[w]).join(' y ')}`}.</b></li>`;
+    return '';
+  }).join('');
+  return `<ul class="ev">${items}</ul>`;
+}
+const rewardHtml = res => `<div class="calc">recompensa r = Φ después − Φ antes${res.events.some(e => e.t === 'end') ? ` + ${res.won ? '1 (ganó)' : '0 (no ganó)'}` : ''}
+  = ${fmt(res.phi1, 2)} − ${fmt(res.phi0, 2)}${res.events.some(e => e.t === 'end') ? ` + ${res.won ? 1 : 0}` : ''} = <b>${fmt(res.r, 3)}</b></div>`;
+
+// ===================== motor de "una jugada paso a paso" =====================
+// Cada algoritmo define cómo piensa (plan) y cómo aprende (learn / endEpisode);
+// el stepper muestra la mesa, revela los pasos y hace la jugada.
+const SHOW = 7; // jugadas que se muestran en la tabla (las mejores según el algoritmo, más la elegida)
+function Stepper(el, A) {
+  let ep = null, plan = null, step = 0, learnSteps = [];
+  function newTurn() {
+    if (!ep || ep.done) { ep = new Episode(A.rng); A.onEpisodeStart && A.onEpisodeStart(); }
+    if (ep.done) return newTurn();
+    const ks = ep.keys(), legal = ep.legal();
+    plan = Object.assign({ ks, legal, hand: ep.hand(), col: ep.g.cols[0].slice(), rows: ep.g.rows.map(r => r.slice()), others: ep.g.cols.slice(1).map(c => c.slice()), turn: ep.g.turn }, A.plan(ep, ks, legal));
+    step = 1; learnSteps = [];
+  }
+  function advance() {
+    step++;
+    if (step === 5 && !plan.res) {
+      plan.res = ep.step(plan.pick);
+      learnSteps = A.learn(plan, plan.res, ep) || [];
+      if (ep.done && A.endEpisode) learnSteps = learnSteps.concat(A.endEpisode() || []);
+    }
+  }
+  const total = () => 5 + (plan && plan.res ? learnSteps.length : (A.learnCount || 1));
+  function render() {
+    const p = plan, show = n => step >= n, T = total();
+    // una jugada por situación distinta (en el orden del algoritmo), y siempre la mejor y la elegida
+    const all = p.order || p.legal.map((_, i) => i), seenK = new Set(), order = [];
+    for (const i of all) if (!seenK.has(p.ks[i]) && order.length < SHOW) { seenK.add(p.ks[i]); order.push(i); }
+    for (const i of [p.best, p.pick]) if (!order.includes(i)) order.push(i);
+    const head = p.cols.map(c => `<th>${c.h}</th>`).join('');
+    const rows = order.map(i => `<tr class="${show(4) && i === p.pick ? 'chosen' : ''} ${show(3) && i === p.best ? 'best' : ''}">
+        <td>${actHTML(p.legal[i], p.hand)}</td><td class="sit">${show(2) ? esc(describeKey(p.ks[i])) : '…'}</td>
+        ${p.cols.map(col => `<td class="num">${show(3) ? col.v[i] : ''}</td>`).join('')}</tr>`).join('');
+    const learnHtml = learnSteps.map((s, k) => show(6 + k) ? `<div class="step ${step === 6 + k ? 'cur' : ''}"><h3><em>${6 + k}</em> ${s.title} <span class="tag">aprende</span></h3>${s.html}</div>` : '').join('');
+    const last = p.res && p.res.events.find(e => e.t === 'play' && e.p === 0);
+    el.innerHTML = `
+      <div class="stepbar" aria-hidden="true">${Array.from({ length: T }, (_, i) => `<span class="${i < step ? 'on' : ''}"></span>`).join('')}</div>
+      <div class="step ${step === 1 ? 'cur' : ''}"><h3><em>1</em> Mira la mesa, su mano y las colecciones <span class="tag">piensa</span></h3>
+        ${tableView(p.rows)}${countsView(p.hand, 'Su mano')}${countsView(p.col, 'Su colección')}
+        <p class="stat">Rivales: ${p.others.map((c, i) => `${NAMES[i + 1]} ${sum(c)} pájaros`).join(' · ')}. Tiene <b>${p.legal.length}</b> jugadas posibles (cada especie de su mano, en cada punta de cada fila).</p></div>
+      ${show(2) ? `<div class="step ${step === 2 ? 'cur' : ''}"><h3><em>2</em> Describe la situación de cada jugada <span class="tag">piensa</span></h3>
+        <p>No le importan las cartas exactas, sino cómo quedaría: cuántos pájaros se lleva, qué bandada podría formar después, cuánto mejora su mano. Eso es lo que puede comparar con lo que vivió antes.</p></div>` : ''}
+      ${show(3) ? `<div class="step ${step === 3 ? 'cur' : ''}"><h3><em>3</em> ${A.lookupTitle} <span class="tag">piensa</span></h3><p>${A.lookupText}</p></div>` : ''}
+      <div class="scroll"><table class="dec"><thead><tr><th>Jugada</th><th>Situación</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>
+      ${p.legal.length > order.length ? `<p class="muted" style="font-size:13px">Se muestran ${order.length} de las ${p.legal.length} jugadas: una por cada situación distinta, empezando por ${A.showNote || 'las que más le gustan'}, más la elegida.</p>` : ''}
+      ${show(4) ? `<div class="step ${step === 4 ? 'cur' : ''}"><h3><em>4</em> ${p.choose.title} <span class="tag">piensa</span></h3>${p.choose.html}</div>` : ''}
+      ${show(5) ? `<div class="step ${step === 5 ? 'cur' : ''}"><h3><em>5</em> Juega y mira qué pasa hasta su próximo turno <span class="tag">${learnSteps.length ? 'aprende' : 'juega'}</span></h3>
+        ${eventsList(p.res)}${p.res.events.length && last ? tableView(p.rows, { row: last.r, side: last.side, n: last.taken.length, cls: 'gone' }) : ''}${rewardHtml(p.res)}</div>` : ''}
+      ${learnHtml}
+      <div class="controls">
+        ${step < T ? `<button class="btn" type="button" data-st="next">Siguiente paso</button><button class="btn secondary" type="button" data-st="all">Ver todos los pasos</button>`
+          : `<button class="btn" type="button" data-st="again">${ep.done ? 'Nueva partida' : 'Siguiente jugada'}</button>`}
+      </div>`;
+  }
+  el.addEventListener('click', e => {
+    const b = e.target.closest('[data-st]'); if (!b) return;
+    if (b.dataset.st === 'next') advance();
+    else if (b.dataset.st === 'all') while (step < total()) advance();
+    else newTurn();
+    render();
+  });
+  return { reset() { ep = null; newTurn(); render(); }, refresh() { if (!plan || plan.res) newTurn(); else Object.assign(plan, A.plan(ep, plan.ks, plan.legal)); render(); } };
+}
+
+// Panel de entrenamiento + stepper, común a las lecciones con algoritmos que aprenden.
+// Entrena en tandas cortas para no trabar la página, y mide el índice de victorias
+// (1 = lo justo: ganar 1 de cada 4 en mesas de 4) en partidas fijas sin explorar.
+function evaluateIndex(choose, games = 60) {
+  let w = 0;
+  for (let k = 0; k < games; k++) {
+    const ep = new Episode(E.makeRng(55000 + k));
+    while (!ep.done) ep.step(choose(ep));
+    if (ep.g.winners.includes(0)) w += ep.n / ep.g.winners.length;
+  }
+  return w / games;
+}
+function practice(root, A, sliders) {
+  root.insertAdjacentHTML('beforeend', `
+    <div class="card">
+      <h2>Probalo: entrenalo y mirá una jugada por dentro</h2>
+      <p>${A.practiceText || 'Arranca sin saber nada. Hacelo jugar partidas para que aprenda y después mirá una jugada paso a paso. Todo pasa acá, en tu navegador, en una mesa de 4 contra Afinado, Coleccionista y Goloso.'}</p>
+      ${sliders.map(s => `<label class="slider" for="sl-${s.k}">${s.label} = <b id="slv-${s.k}">${fmt(A.hp[s.k])}</b><input type="range" id="sl-${s.k}" data-k="${s.k}" min="${s.min}" max="${s.max}" step="${s.step}" value="${A.hp[s.k]}"></label>`).join('')}
+      <div class="controls">
+        <button class="btn secondary" type="button" data-tr="100">Jugar 100 partidas</button>
+        <button class="btn secondary" type="button" data-tr="1000">Jugar 1000 partidas</button>
+        <button class="btn secondary" type="button" data-tr="eval">Medir cómo juega</button>
+        <button class="btn secondary" type="button" data-tr="reset">Empezar de cero</button>
+      </div>
+      <p class="stat" data-nb></p>
+      <div class="stepper" data-stepper></div>
+    </div>`);
+  const card = root.lastElementChild, nb = card.querySelector('[data-nb]');
+  const st = Stepper(card.querySelector('[data-stepper]'), A);
+  let trained = 0, busy = false, last = '';
+  const status = extra => { nb.innerHTML = `Partidas jugadas: <b>${trained.toLocaleString('es-AR')}</b> · ${A.size()}${last}${extra || ''}`; };
+  card.addEventListener('click', e => {
+    const b = e.target.closest('[data-tr]'); if (!b || busy) return;
+    if (b.dataset.tr === 'reset') { A.reset(); trained = 0; last = ''; status(); st.reset(); return; }
+    if (b.dataset.tr === 'eval') {
+      busy = true; status(' · midiendo…');
+      setTimeout(() => { const v = evaluateIndex(ep => A.greedyIndex(ep)); last = ` · índice de victorias sin explorar: <b>${fmt(v)}</b> (1 = lo justo; Afinado ronda 1,5)`; busy = false; status(); }, 30);
+      return;
+    }
+    const k = +b.dataset.tr; let done = 0; busy = true;
+    const tick = () => {
+      const t = performance.now();
+      while (done < k && performance.now() - t < 60) { A.trainEpisode(new Episode(A.rng)); done++; trained++; }
+      status(done < k ? ` · entrenando ${done}/${k}…` : '');
+      if (done < k) setTimeout(tick, 0); else { busy = false; st.reset(); }
+    };
+    tick();
+  });
+  card.addEventListener('input', e => {
+    const k = e.target.dataset && e.target.dataset.k; if (!k) return;
+    A.hp[k] = +e.target.value; card.querySelector(`#slv-${k}`).textContent = fmt(A.hp[k]); st.refresh();
+  });
+  status(); st.reset();
+}
+
+const updateAvgHtml = (u, r, what = 'r') => `<p>Situación: ${esc(describeKey(u.s))}.</p>
+  <div class="calc">N = ${u.oldN} + 1 = <b>${u.newN}</b>
+Q = Q + (${what} − Q) / N
+  = ${fmt(u.oldQ, 3)} + (${par(r)} − ${fmt(u.oldQ, 3)}) / ${u.newN}
+  = <b>${fmt(u.newQ, 3)}</b></div>
+  <p class="muted">${r > u.oldQ ? 'Le fue mejor de lo que esperaba: la próxima vez esa situación le va a gustar un poco más.' : r < u.oldQ ? 'Le fue peor de lo que esperaba: esa situación le va a gustar un poco menos.' : 'Salió justo lo esperado: el promedio no cambia.'} ${u.newN > 50 ? 'Como ya la vio muchas veces, una jugada nueva la mueve poco.' : ''}</p>`;
+
+// Cuaderno de promedios (Q, N), compartido por ε-greedy, UCB y Monte Carlo.
+function Notebook() {
+  const Q = new Map(), N = new Map();
+  return {
+    Q, N, q: k => Q.has(k) ? Q.get(k) : 0, n: k => N.get(k) || 0,
+    add(k, x) { const oldQ = this.q(k), oldN = this.n(k), newN = oldN + 1, newQ = oldQ + (x - oldQ) / newN; N.set(k, newN); Q.set(k, newQ); return { s: k, oldQ, oldN, newN, newQ }; },
+    clear() { Q.clear(); N.clear(); },
+  };
+}
+const qCell = (nb, k) => nb.n(k) ? fmt(nb.q(k), 3) : '0 <span class="muted">(nueva)</span>';
+const orderBy = (n, f) => Array.from({ length: n }, (_, i) => i).sort((a, b) => f(b) - f(a));
+
+// ---- ε-greedy ----
+function EpsGreedy() {
+  const nb = Notebook(), rng = seed(7), hp = { eps: 0.1 };
+  const pickEps = ks => rng() < hp.eps ? rng.int(ks.length) : argmax(ks, k => nb.q(k));
+  return {
+    rng, hp, learnCount: 1, reset: () => nb.clear(), size: () => `situaciones en el cuaderno: <b>${nb.Q.size}</b>`,
+    trainEpisode(ep) { while (!ep.done) { const ks = ep.keys(), i = pickEps(ks); nb.add(ks[i], ep.step(i).r); } },
+    greedyIndex: ep => argmax(ep.keys(), k => nb.q(k)),
+    lookupTitle: 'Busca cada situación en el cuaderno',
+    lookupText: 'Q es cuánto le rindió en promedio esa situación hasta su próxima jugada; N, cuántas veces la vio. La fila marcada es la de mayor Q: la que hoy cree mejor.',
+    plan(ep, ks) {
+      const best = argmax(ks, k => nb.q(k)), coin = rng(), explore = coin < hp.eps, pick = explore ? rng.int(ks.length) : best;
+      return { best, pick, order: orderBy(ks.length, i => nb.q(ks[i])), cols: [{ h: 'Q', v: ks.map(k => qCell(nb, k)) }, { h: 'N', v: ks.map(k => nb.n(k)) }],
+        choose: { title: 'Tira la moneda', html: `<p class="coin"><i>${fmt(coin)}</i> ${explore ? `salió menor que ε = ${fmt(hp.eps)}: <span style="color:var(--accent)">explora</span> y hace una jugada al azar: ${actHTML(ep.legal()[pick], ep.hand())}.` : `no es menor que ε = ${fmt(hp.eps)}: aprovecha y hace la de mayor Q: ${actHTML(ep.legal()[pick], ep.hand())}.`}</p>` } };
+    },
+    learn(p, res) { const u = nb.add(p.ks[p.pick], res.r); return [{ title: 'Corrige el cuaderno', html: updateAvgHtml(u, res.r) }]; },
+  };
+}
+
+// ---- UCB ----
+function UCB() {
+  const nb = Notebook(), rng = seed(11), hp = { c: 0.2 };
+  let t = 0;
+  const bonus = k => nb.n(k) ? hp.c * Math.sqrt(Math.log(t + 1) / nb.n(k)) : Infinity;
+  const pickUcb = ks => { const u = ks.findIndex(k => !nb.n(k)); return u >= 0 ? u : argmax(ks, k => nb.q(k) + bonus(k)); };
+  return {
+    rng, hp, learnCount: 1, reset: () => { nb.clear(); t = 0; }, size: () => `situaciones en el cuaderno: <b>${nb.Q.size}</b> · decisiones (t): <b>${t.toLocaleString('es-AR')}</b>`,
+    trainEpisode(ep) { while (!ep.done) { const ks = ep.keys(), i = pickUcb(ks); t++; nb.add(ks[i], ep.step(i).r); } },
+    greedyIndex: ep => argmax(ep.keys(), k => nb.q(k)),
+    lookupTitle: 'Busca cada situación y le suma un bono por incertidumbre',
+    lookupText: 'Además del promedio Q, calcula un bono que es grande si la situación se probó pocas veces (N chico) y que crece despacio con el total de decisiones t. El puntaje es Q + bono: una situación poco probada parece mejor de lo que su promedio dice.',
+    plan(ep, ks) {
+      const best = argmax(ks, k => nb.q(k)), pick = pickUcb(ks), unv = !nb.n(ks[pick]);
+      return { best, pick, order: orderBy(ks.length, i => nb.q(ks[i]) + Math.min(bonus(ks[i]), 9)), cols: [
+        { h: 'Q', v: ks.map(k => qCell(nb, k)) }, { h: 'N', v: ks.map(k => nb.n(k)) },
+        { h: 'Bono', v: ks.map(k => nb.n(k) ? fmt(bonus(k), 3) : '∞') }, { h: 'Q + bono', v: ks.map(k => nb.n(k) ? fmt(nb.q(k) + bonus(k), 3) : '∞') }],
+        choose: { title: 'Elige el mayor puntaje', html: unv
+          ? `<p>Hay una situación que nunca probó: su bono es infinito, así que la prueba sí o sí: ${actHTML(ep.legal()[pick], ep.hand())}.</p>`
+          : `<div class="calc">bono = c · √( ln t / N ) = ${fmt(hp.c)} · √( ln ${t + 1} / ${nb.n(ks[pick])} ) = <b>${fmt(bonus(ks[pick]), 3)}</b></div>
+             <p>Hace ${actHTML(ep.legal()[pick], ep.hand())}, la de mayor Q + bono. ${pick === best ? 'Coincide con la de mayor Q: el bono no cambió la decisión.' : '<b>No</b> es la de mayor Q: el bono la empujó a probar una situación con menos experiencia.'} No hay moneda: explora de forma calculada, no al azar.</p>` } };
+    },
+    learn(p, res) { t++; const u = nb.add(p.ks[p.pick], res.r); return [{ title: 'Corrige el cuaderno', html: updateAvgHtml(u, res.r) + '<p class="muted">Al subir N, el bono de esta situación se achica: la va a explorar menos.</p>' }]; },
+  };
+}
+
+// ---- Bandido por gradiente ----
+function GradientBandit() {
+  const H = new Map(), rng = seed(13), hp = { alpha: 0.1 };
+  let base = 0, steps = 0;
+  const h = k => H.get(k) || 0;
+  const probs = ks => { const m = Math.max(...ks.map(h)), e = ks.map(k => Math.exp(h(k) - m)), s = sum(e); return e.map(x => x / s); };
+  const sample = p => { let u = rng(), i = 0; for (; i < p.length - 1; i++) { u -= p[i]; if (u <= 0) break; } return i; };
+  function update(ks, j, R) {
+    const p = probs(ks); steps++;
+    const oldBase = base; base += (R - base) / steps;
+    const delta = R - oldBase, before = ks.map(h);
+    // claves repetidas entre jugadas: se suma la parte de cada una
+    const grad = new Map();
+    ks.forEach((k, i) => grad.set(k, (grad.get(k) || 0) + (i === j ? 1 : 0) - p[i]));
+    for (const [k, g] of grad) H.set(k, h(k) + hp.alpha * delta * g);
+    return { p, R, oldBase, newBase: base, delta, before, after: ks.map(h) };
+  }
+  return {
+    rng, hp, learnCount: 1, reset: () => { H.clear(); base = 0; steps = 0; }, size: () => `situaciones con preferencia: <b>${H.size}</b> · recompensa promedio: <b>${fmt(base, 3)}</b>`,
+    trainEpisode(ep) { while (!ep.done) { const ks = ep.keys(), i = sample(probs(ks)); update(ks, i, ep.step(i).r); } },
+    greedyIndex: ep => argmax(ep.keys(), h),
+    lookupTitle: 'Busca la preferencia de cada situación',
+    lookupText: 'No guarda cuánto rinde cada situación, sino una <b>preferencia</b> H: un número sin unidades, más alto = le gusta más. Con un softmax convierte las preferencias en probabilidades π, que suman 100%.',
+    plan(ep, ks) {
+      const p = probs(ks), best = argmax(p), r = rng(); let u = r, pick = 0;
+      for (; pick < p.length - 1; pick++) { u -= p[pick]; if (u <= 0) break; }
+      return { best, pick, order: orderBy(ks.length, i => p[i]), cols: [{ h: 'H', v: ks.map(k => fmt(h(k), 3)) }, { h: 'π', v: p.map(x => `${fmt(x * 100, 1)}%`) }],
+        choose: { title: 'Sortea según las probabilidades', html: `<p class="coin"><i>${fmt(r)}</i> Repartimos el intervalo de 0 a 1 entre las jugadas según π, y el número sorteado cae en ${actHTML(ep.legal()[pick], ep.hand())} (π = ${fmt(p[pick] * 100, 1)}%).</p>
+          <p class="muted">No hay ε: la exploración está en el sorteo mismo. Al principio las preferencias son iguales y juega casi al azar; a medida que aprende, las probabilidades se concentran.</p>` } };
+    },
+    learn(p, res) {
+      const u = update(p.ks, p.pick, res.r), j = p.pick;
+      return [{ title: 'Compara con lo que espera y ajusta preferencias', html: `
+        <div class="calc">recompensa r = <b>${fmt(u.R, 3)}</b>
+línea de base R̄ = ${fmt(u.oldBase, 3)}   (promedio de todas las recompensas)
+r − R̄ = <b>${fmt(u.delta, 3)}</b>
+jugada:  H ← H + α · (r − R̄) · (1 − π) = ${fmt(u.before[j], 3)} + ${fmt(hp.alpha)} · ${par(u.delta)} · (1 − ${fmt(u.p[j], 3)}) = <b>${fmt(u.after[j], 3)}</b>
+otras:   H ← H − α · (r − R̄) · π
+R̄ ← ${fmt(u.newBase, 3)}</div>
+        <p>${u.delta >= 0 ? 'Le fue mejor que lo habitual: sube la preferencia de lo que jugó y baja la de las demás.' : 'Le fue peor que lo habitual: baja la preferencia de lo que jugó y sube un poco la de las demás.'}</p>` }];
+    },
+  };
+}
+
+// ---- Monte Carlo on-policy ----
+function MonteCarlo() {
+  const nb = Notebook(), rng = seed(17), hp = { eps: 0.1 };
+  let diary = [];
+  const pick = ks => rng() < hp.eps ? rng.int(ks.length) : argmax(ks, k => nb.q(k));
+  function finish(traj) {
+    let G = 0;
+    const rows = [];
+    for (let i = traj.length - 1; i >= 0; i--) { G += traj[i].r; rows.unshift({ ...traj[i], G, u: nb.add(traj[i].k, G) }); }
+    return rows;
+  }
+  return {
+    rng, hp, learnCount: 1, reset: () => nb.clear(), size: () => `situaciones en el cuaderno: <b>${nb.Q.size}</b>`,
+    onEpisodeStart() { diary = []; },
+    trainEpisode(ep) { const traj = []; while (!ep.done) { const ks = ep.keys(), i = pick(ks); traj.push({ k: ks[i], r: ep.step(i).r }); } finish(traj); },
+    greedyIndex: ep => argmax(ep.keys(), k => nb.q(k)),
+    lookupTitle: 'Busca cuánto le rindió cada situación hasta el final de la partida',
+    lookupText: 'Igual que el bandido, pero Q ya no es "lo que pasó hasta la próxima jugada": es <b>todo lo que juntó desde esa jugada hasta que terminó la partida</b>, incluido el 1 si ganó. Una jugada que hoy no suma nada puede tener Q alto si suele llevar a ganar.',
+    plan(ep, ks) {
+      const best = argmax(ks, k => nb.q(k)), coin = rng(), explore = coin < hp.eps, p = explore ? rng.int(ks.length) : best;
+      return { best, pick: p, order: orderBy(ks.length, i => nb.q(ks[i])), cols: [{ h: 'Q (hasta el final)', v: ks.map(k => qCell(nb, k)) }, { h: 'N', v: ks.map(k => nb.n(k)) }],
+        choose: { title: 'Tira la moneda', html: `<p class="coin"><i>${fmt(coin)}</i> ${explore ? `menor que ε = ${fmt(hp.eps)}: explora y hace una jugada al azar.` : 'aprovecha: hace la de mayor Q.'}</p>` } };
+    },
+    learn(p, res) {
+      diary.push({ n: diary.length + 1, a: p.legal[p.pick], hand: p.hand, k: p.ks[p.pick], r: res.r });
+      return [{ title: 'Todavía no aprende: anota en la libreta', html: `<p>Monte Carlo no corrige nada en medio de la partida: todavía no sabe cómo termina la historia. Sólo anota qué situación eligió y qué recompensa recibió.</p>
+        <div class="scroll"><table class="dec"><thead><tr><th>#</th><th>Jugada</th><th>r</th></tr></thead><tbody>${diary.slice(-8).map(d => `<tr><td>${d.n}</td><td>${actHTML(d.a, d.hand)}</td><td class="num">${fmt(d.r, 3)}</td></tr>`).join('')}</tbody></table></div>` }];
+    },
+    endEpisode() {
+      const rows = finish(diary.map(d => ({ ...d })));
+      return [{ title: 'Termina la partida: calcula G de atrás para adelante y corrige', html: `
+        <p>Ahora sí sabe cómo terminó. Para cada jugada calcula <b>G</b>: todo lo que juntó desde ahí hasta el final. Lo hace de atrás para adelante, sumando: G de la última = su r; G de la anterior = su r + G de la última; y así.</p>
+        <div class="scroll"><table class="dec"><thead><tr><th>#</th><th>r</th><th>G</th><th>Q antes → después</th></tr></thead><tbody>
+        ${rows.map(r => `<tr><td>${r.n}</td><td class="num">${fmt(r.r, 3)}</td><td class="num"><b>${fmt(r.G, 3)}</b></td><td class="num">${fmt(r.u.oldQ, 3)} → <b>${fmt(r.u.newQ, 3)}</b></td></tr>`).join('')}</tbody></table></div>
+        <div class="calc">para cada jugada:  N ← N + 1;   Q ← Q + (G − Q) / N</div>
+        <p class="muted">Como el potencial se va sumando y restando, G termina siendo "ganó o no" menos el Φ que tenía al jugar. Ese Φ depende de cómo venía la partida, no de la jugada, y la tabla no lo ve: es ruido que el promedio tiene que absorber.</p>` }];
+    },
+  };
+}
+
+// ===================== Lección 0 =====================
+function lesson0(root) {
+  root.innerHTML = `
+    <div><div class="eyebrow">Lección 0 · Sutton y Barto, cap. 1 y 3</div><h1>Qué es aprender por refuerzo</h1></div>
+    <p class="idea">Un agente toma decisiones, ve qué pasa y, con el tiempo, aprende qué le conviene. Nadie le dice cuál era la jugada correcta: sólo recibe un resultado bueno o malo, a veces mucho después.</p>
+    <div class="card">
+      <h2>El ciclo</h2>
+      <div class="loop" aria-label="Ciclo agente y entorno">
+        <div class="box"><b>Agente</b><small>el bot que aprende</small></div>
+        <div class="arrows"><span class="to">acción: juega pájaros →</span><span class="back">← estado nuevo y recompensa</span></div>
+        <div class="box"><b>Entorno</b><small>la mesa y los rivales</small></div>
+      </div>
+      <p>En cada turno el agente mira la mesa, elige qué pájaros jugar y dónde, juegan los rivales y le llega una <b>recompensa</b>. Su meta es juntar la mayor recompensa posible a lo largo de la partida, o sea, ganarla.</p>
+    </div>
+    <div class="card">
+      <h2>El vocabulario, en CuBirds</h2>
+      <dl class="gloss">
+        <dt>Estado</dt><dd>Lo que el agente sabe al decidir: las cuatro filas, su mano, las colecciones de todos y cuántas cartas tiene cada rival. No ve las manos ajenas ni el mazo: es un juego de <b>información imperfecta</b>.</dd>
+        <dt>Acción</dt><dd>Una especie de su mano y una punta de una fila. Con 5 especies en la mano hay 5 × 4 filas × 2 puntas = 40 jugadas posibles. Robar 2 y formar bandadas también son decisiones, pero en estas lecciones las toma con las reglas de Afinado, para mirar sólo la jugada principal.</dd>
+        <dt>Recompensa</dt><dd>Lo que de verdad importa es ganar: 1 si gana la partida, 0 si no. Como eso llega recién al final, de 15 a 20 jugadas después, le damos una pista en el medio (ver abajo).</dd>
+        <dt>Episodio</dt><dd>Una partida entera: 40 a 80 turnos en total, unas 15 jugadas del agente.</dd>
+        <dt>Política</dt><dd>La regla con la que elige: "en esta situación, hacé esta jugada". Es lo que queremos que aprenda.</dd>
+        <dt>Valor</dt><dd>Cuánta recompensa espera juntar desde una situación hasta el final si sigue jugando como juega. Muchos algoritmos aprenden valores y eligen la jugada de mayor valor.</dd>
+        <dt>Modelo</dt><dd>Una forma de imaginar qué va a pasar sin jugarlo: por ejemplo, repartir manos posibles a los rivales y simular. Los algoritmos que "piensan" (búsqueda) usan uno.</dd>
+      </dl>
+    </div>
+    <div class="card">
+      <h2>Una pista en el camino: el potencial</h2>
+      <p>Si sólo recibiera 1 al ganar, al principio no aprendería nada: jugando al azar casi nunca gana. Por eso, entre una jugada y la siguiente recibe el cambio de un <b>potencial</b>:</p>
+      <div class="calc">Φ = 0,1 · pájaros en su colección − 0,1 · bandadas que le faltan para ganar
+r  = Φ después − Φ antes        (y al terminar: 1 si ganó, menos el Φ que tenía)</div>
+      <p>Formar una bandada grande, por ejemplo, sube Φ: +0,2 por los dos pájaros y +0,1 si lo acerca a ganar. El truco, de Ng, Harada y Russell (1999), es que todo lo que suma el potencial a lo largo de la partida se cancela al final: <b>no cambia cuál es la mejor forma de jugar</b>, sólo da señal antes.</p>
+    </div>
+    <div class="card">
+      <h2>Explorar o aprovechar</h2>
+      <p>Si el agente siempre hace lo que hoy cree mejor (<b>aprovechar</b>), nunca descubre si otra jugada era aún mejor. Si prueba cosas nuevas (<b>explorar</b>), a veces paga caro. Todos los algoritmos tienen que equilibrar las dos cosas, y cada lección muestra una forma distinta de hacerlo.</p>
+    </div>
+    <div class="card">
+      <h2>El truco: no recordar la mesa entera</h2>
+      <p>Las combinaciones de mesa, mano y colecciones son astronómicas: el agente nunca vería dos veces la misma. Por eso, en vez de recordar estados completos, los primeros algoritmos miran <b>cómo quedaría</b> después de cada jugada: cuántos pájaros se lleva, si le queda una bandada para formar y si eso lo acerca a ganar, cuánto mejora su mano, cuántas cartas quema y cuánto le falta a él y al mejor rival. El libro llama a esto <b>afterstate</b> (sección 6.8). Con 8 rasgos así, cada situación se repite muchísimo.</p>
+      <p class="muted">Una situación real, ahora mismo (mesa de 4 contra Afinado, Coleccionista y Goloso):</p>
+      <div id="l0ex"></div>
+      <div class="controls"><button class="btn secondary" type="button" id="l0new">Ver otra situación</button></div>
+    </div>
+    <div class="card">
+      <h2>Pensar y aprender son cosas distintas</h2>
+      <p><b>Aprender</b> es cambiar lo que el agente sabe a partir de lo que le pasó: ajustar un promedio, una tabla, los pesos de una red. <b>Pensar</b> es usar lo que sabe para decidir ahora, a veces imaginando el futuro.</p>
+      <p>Los primeros algoritmos del recorrido casi no piensan: buscan en su tabla y listo. El ISMCTS es lo contrario: no aprende nada entre partidas, pero piensa muchísimo en cada jugada. AlphaZero, al final, hace las dos cosas.</p>
+    </div>
+    <div class="next"><button class="btn" type="button" data-go="1">Lección 1: el bandido ε-greedy →</button></div>`;
+  function show() {
+    const rng = seed(3), ep = new Episode(rng), af = botOf('afinado');
+    for (let t = rng.int(5); t > 0 && !ep.done; t--) ep.step(ep.legal().indexOf(af.act(ep.g, rng)));
+    if (ep.done) return show();
+    const ks = ep.keys(), legal = ep.legal(), hand = ep.hand();
+    // una jugada por situación distinta, las primeras 8
+    const seen = new Set(), pick = [];
+    legal.forEach((a, i) => { if (!seen.has(ks[i]) && pick.length < 8) { seen.add(ks[i]); pick.push(i); } });
+    $('l0ex').innerHTML = `${tableView(ep.g.rows)}${countsView(hand, 'Su mano')}${countsView(ep.g.cols[0], 'Su colección')}
+      <p class="stat" style="margin-top:8px">${legal.length} jugadas posibles, pero sólo <b>${new Set(ks).size}</b> situaciones distintas: muchas jugadas quedan igual para el algoritmo. Algunas:</p>
+      <div class="scroll"><table class="dec"><thead><tr><th>Jugada</th><th>Cómo quedaría (lo que ve el algoritmo)</th></tr></thead>
+      <tbody>${pick.map(i => `<tr><td>${actHTML(legal[i], hand)}</td><td class="sit">${esc(describeKey(ks[i], true))}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+  $('l0new').addEventListener('click', show);
+  show();
+}
+
+// ===================== Lección 1: bandido ε-greedy =====================
+function lesson1(root) {
+  const A = EpsGreedy();
+  root.innerHTML = `
+    <div><div class="eyebrow">Lección 1 · Sutton y Barto, cap. 2.2 a 2.4</div><h1>El bandido ε-greedy</h1></div>
+    <p class="idea">Lleva un cuaderno: para cada situación anota cuánto le rindió en promedio. Casi siempre hace la jugada cuya situación rindió más, y de vez en cuando (con probabilidad ε) prueba una al azar, por si estaba equivocado.</p>
+    <div class="card">
+      <h2>¿Por qué "bandido"?</h2>
+      <p>Por las máquinas tragamonedas, los "bandidos de un brazo". Imaginá varias máquinas que pagan distinto en promedio: jugando, querés descubrir cuál paga más sin perder demasiado mientras probás. Acá cada situación de una jugada es una "máquina", y el pago es cuánto sube su potencial hasta su próximo turno.</p>
+      <p>Este bandido mira <b>sólo lo inmediato</b>: le importa lo que gana con esa jugada, no qué pasa después. Eso lo hace simple y también limitado, como vas a ver.</p>
+    </div>
+    <div class="card">
+      <h2>Qué anota en el cuaderno</h2>
+      <dl class="gloss">
+        <dt>N</dt><dd>Cuántas veces hizo una jugada en esa situación.</dd>
+        <dt>Q</dt><dd>Cuánto le rindió en promedio (la recompensa r hasta su próxima jugada). Una situación que nunca vio vale 0: no sabe nada de ella.</dd>
+      </dl>
+    </div>
+    <div class="card">
+      <h2>Cómo piensa</h2>
+      <ol class="steps">
+        <li>Mira la mesa, su mano y las colecciones.</li>
+        <li>Para cada jugada posible, describe en qué situación quedaría.</li>
+        <li>Busca en el cuaderno cuánto le rindió cada situación (Q).</li>
+        <li>Tira una moneda cargada: con probabilidad ε hace una jugada al azar (explora); si no, la de mayor Q (aprovecha).</li>
+      </ol>
+      <h2>Cómo aprende</h2>
+      <ol class="steps" start="5">
+        <li>Juega y mira qué recompensa recibió hasta su próximo turno.</li>
+        <li>Suma 1 a N de esa situación y corrige el promedio: Q ← Q + (r − Q) / N. Es un promedio que se va actualizando sin tener que guardar todos los resultados.</li>
+      </ol>
+    </div>`;
+  practice(root, A, [{ k: 'eps', label: 'ε', min: 0, max: 0.5, step: 0.05 }]);
+  root.insertAdjacentHTML('beforeend', `
+    <div class="card">
+      <h2>En pseudocódigo</h2>
+      <div class="code">para cada jugada:
+    situaciones = [situación(a) para a en jugadas posibles]
+    si azar() &lt; ε:
+        i = una al azar                    # explorar
+    si no:
+        i = argmax Q[situaciones]          # aprovechar
+    r = jugar(i)
+    s = situaciones[i]
+    N[s] = N[s] + 1
+    Q[s] = Q[s] + (r - Q[s]) / N[s]</div>
+    </div>
+    <div class="card">
+      <h2>Lo bueno y lo que le falta</h2>
+      <div class="pros">
+        <div><h3>Lo bueno</h3><ul><li>Es simple y fácil de interpretar: el cuaderno se puede leer.</li><li>Aprende rápido lo obvio: que formar bandadas suma.</li><li>No necesita modelo del juego ni de los rivales.</li></ul></div>
+        <div><h3>Lo que le falta</h3><ul><li>Mira sólo lo inmediato: no ve que llevarse pájaros que no le sirven ahora le deja la mano lista para una bandada grande dentro de tres turnos.</li><li>Explora siempre igual, aunque ya sepa mucho (eso lo mejora UCB, en la próxima lección).</li><li>Si la situación se describe mal, aprende mal: el cuaderno es tan bueno como sus 8 rasgos.</li></ul></div>
+      </div>
+      <div class="elos" data-elos="tabla:sb_epsilon_greedy"></div>
+    </div>
+    <div class="next">
+      <a class="btn secondary" href="lab.html#bandido">Verlo entrenar en el Laboratorio</a>
+      <button class="btn" type="button" data-go="2">Lección 2: UCB y gradiente →</button>
+    </div>`);
+}
+
+// ===================== Lección 2: UCB y bandido por gradiente =====================
+function lesson2(root) {
+  root.innerHTML = `
+    <div><div class="eyebrow">Lección 2 · Sutton y Barto, cap. 2.6 a 2.8</div><h1>UCB y el bandido por gradiente</h1></div>
+    <p class="idea">El ε-greedy explora a ciegas: tira la moneda aunque ya conozca bien todas las opciones. Estos dos bandidos exploran con criterio: uno prueba lo que todavía no conoce, el otro aprende cuánto explorar.</p>
+    <div class="card">
+      <h2>UCB: optimismo ante la incertidumbre</h2>
+      <p>A cada situación le suma un <b>bono</b> que es grande si la probó pocas veces: "no sé cuánto rinde, así que le doy el beneficio de la duda". Con cada prueba el bono se achica, y al final elige casi sólo por el promedio.</p>
+      <div class="calc">puntaje = Q(s) + c · √( ln t / N(s) )</div>
+      <p class="muted">t es cuántas decisiones tomó en total y c regula cuánto explora. Como acá las recompensas son chicas (décimas), c también: 0,2.</p>
+    </div>
+    <div class="card">
+      <h2>Bandido por gradiente: aprender preferencias</h2>
+      <p>No estima cuánto rinde cada situación: le pone una <b>preferencia</b> y juega por sorteo, más seguido lo que prefiere. Si una jugada salió mejor que su promedio histórico (la <b>línea de base</b>), la prefiere más; si salió peor, menos.</p>
+    </div>
+    <div class="card">
+      <h2>Elegí cuál mirar</h2>
+      <div class="controls"><button class="btn" type="button" data-v="ucb">UCB</button><button class="btn secondary" type="button" data-v="grad">Gradiente</button></div>
+    </div>
+    <div id="l2practice"></div>
+    <div class="card">
+      <h2>En pseudocódigo</h2>
+      <div class="pros">
+        <div><h3>UCB</h3><div class="code">si alguna situación tiene N = 0:
+    probarla
+si no:
+    i = argmax Q + c·√(ln t / N)
+r = jugar(i)
+promediar r en Q[s]</div></div>
+        <div><h3>Gradiente</h3><div class="code">π = softmax(H[situaciones])
+i = sortear(π)
+r = jugar(i)
+R̄ = promedio de r
+H[s_i] += α (r − R̄)(1 − π_i)
+H[otras] −= α (r − R̄) π</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Lo bueno y lo que les falta</h2>
+      <div class="pros">
+        <div><h3>Lo bueno</h3><ul><li>UCB no desperdicia exploración en lo que ya conoce bien.</li><li>El gradiente aprende directamente qué hacer, y su exploración se apaga sola cuando está seguro.</li></ul></div>
+        <div><h3>Lo que les falta</h3><ul><li>Siguen mirando sólo lo inmediato: el problema de fondo no cambió.</li><li>En CuBirds los tres bandidos quedan parejos en el ranking: con unas pocas miles de situaciones, explorar al azar ya alcanza.</li><li>El gradiente depende de un buen paso α.</li></ul></div>
+      </div>
+      <div class="elos" data-elos="tabla:sb_ucb,tabla:sb_gradiente_bandido,tabla:sb_optimista,tabla:sb_epsilon_greedy"></div>
+    </div>
+    <div class="next">
+      <a class="btn secondary" href="lab.html#ucb">UCB en el Laboratorio</a>
+      <button class="btn" type="button" data-go="3">Lección 3: Monte Carlo →</button>
+    </div>`;
+  const host = $('l2practice');
+  const showAlg = v => {
+    host.innerHTML = '';
+    if (v === 'ucb') practice(host, UCB(), [{ k: 'c', label: 'c', min: 0, max: 1, step: 0.05 }]);
+    else practice(host, GradientBandit(), [{ k: 'alpha', label: 'α', min: 0.01, max: 0.5, step: 0.01 }]);
+    root.querySelectorAll('[data-v]').forEach(b => b.className = `btn ${b.dataset.v === v ? '' : 'secondary'}`);
+  };
+  root.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) showAlg(b.dataset.v); });
+  showAlg('ucb');
+}
+
+// ===================== Lección 3: Monte Carlo =====================
+function lesson3(root) {
+  const A = MonteCarlo();
+  root.innerHTML = `
+    <div><div class="eyebrow">Lección 3 · Sutton y Barto, cap. 5</div><h1>Monte Carlo: aprender de la partida entera</h1></div>
+    <p class="idea">Espera a que termine la partida y recién ahí aprende: a cada jugada le asigna todo lo que pasó desde ella hasta el final. Así ve consecuencias que el bandido no ve.</p>
+    <div class="card">
+      <h2>El problema que resuelve</h2>
+      <p>En CuBirds lo que importa casi nunca pasa en el turno: llevarse dos loros ahora no suma nada, pero tres turnos después completa una bandada grande que gana la partida. El bandido no puede aprender eso. Monte Carlo sí: si la partida salió bien, todas las jugadas que llevaron ahí reciben crédito.</p>
+    </div>
+    <div class="card">
+      <h2>¿Por qué "Monte Carlo"?</h2>
+      <p>Por el casino: es el nombre que se usa para todo método que estima promediando muchas muestras al azar. Acá cada partida es una muestra de "qué pasa si hago esto en esta situación".</p>
+    </div>
+    <div class="card">
+      <h2>Cómo piensa</h2>
+      <p>Igual que el ε-greedy: busca Q de cada situación, casi siempre elige la mayor y a veces explora. Lo que cambia es qué significa Q.</p>
+      <h2>Cómo aprende</h2>
+      <ol class="steps">
+        <li>Durante la partida no corrige nada: anota cada situación y su recompensa.</li>
+        <li>Al terminar, calcula de atrás para adelante G = todo lo que juntó desde cada jugada hasta el final.</li>
+        <li>Promedia G en el Q de cada situación que visitó.</li>
+      </ol>
+    </div>`;
+  practice(root, A, [{ k: 'eps', label: 'ε', min: 0, max: 0.5, step: 0.05 }]);
+  root.insertAdjacentHTML('beforeend', `
+    <div class="card">
+      <h2>En pseudocódigo</h2>
+      <div class="code">libreta = []
+mientras no termina la partida:
+    elegir con ε-greedy; r = jugar
+    libreta.agregar((situación, r))
+G = 0
+para (s, r) en libreta, de atrás para adelante:
+    G = G + r
+    N[s] += 1;  Q[s] += (G − Q[s]) / N[s]</div>
+    </div>
+    <div class="card">
+      <h2>Lo bueno y lo que le falta</h2>
+      <div class="pros">
+        <div><h3>Lo bueno</h3><ul><li>Ve consecuencias a largo plazo.</li><li>No hace suposiciones: usa resultados reales.</li><li>Es la base de muchos métodos, incluida la búsqueda de las lecciones 11 y 13.</li></ul></div>
+        <div><h3>Lo que le falta</h3><ul><li>Tiene que esperar al final de la partida, que en CuBirds es largo: unas 15 jugadas propias.</li><li>Es muy ruidoso: un mismo G mezcla la suerte de toda la partida, y el Φ con que venía cada jugada (que la tabla no ve) se cuela en el valor. En el ranking queda abajo.</li><li>Le echa la culpa a todas las jugadas por igual. TD, en la próxima lección, ataca esto.</li></ul></div>
+      </div>
+      <div class="elos" data-elos="tabla:sb_mc_on_policy,tabla:sb_mc_off_policy"></div>
+    </div>
+    <div class="next">
+      <a class="btn secondary" href="lab.html#mc">Verlo entrenar en el Laboratorio</a>
+      <button class="btn" type="button" data-go="4">Lección 4: SARSA y Q-learning →</button>
+    </div>`);
+}
+
+// ===================== TD: SARSA, Q-learning, Expected SARSA =====================
+function TDAgent(kind) {
+  const Q = new Map(), N = new Map(), rng = seed(23), hp = { eps: 0.1, alpha: 0.05 };
+  const q = k => Q.get(k) || 0;
+  let pending = null; // SARSA elige la jugada siguiente al armar su objetivo
+  const epsPick = ks => rng() < hp.eps ? rng.int(ks.length) : argmax(ks, q);
+  function target(r, nextKs, nextPick) {
+    if (!nextKs) return { tgt: r, how: 'última jugada: sólo la recompensa' };
+    if (kind === 'sarsa') return { tgt: r + q(nextKs[nextPick]), how: 'r + Q(la jugada que va a hacer después)' };
+    if (kind === 'q') return { tgt: r + Math.max(...nextKs.map(q)), how: 'r + Q(la mejor jugada posible después)' };
+    const n = nextKs.length, b = argmax(nextKs, q), pr = nextKs.map((_, i) => hp.eps / n + (i === b ? 1 - hp.eps : 0));
+    return { tgt: r + nextKs.reduce((a, k, i) => a + pr[i] * q(k), 0), how: 'r + promedio de Q después, pesado por la probabilidad ε-greedy' };
+  }
+  function upd(k, tgt) { const old = q(k); Q.set(k, old + hp.alpha * (tgt - old)); N.set(k, (N.get(k) || 0) + 1); return { old, now: q(k) }; }
+  return {
+    rng, hp, learnCount: 2, reset: () => { Q.clear(); N.clear(); pending = null; }, size: () => `situaciones en la tabla: <b>${Q.size}</b>`,
+    onEpisodeStart() { pending = null; },
+    trainEpisode(ep) {
+      let ks = ep.keys(), i = epsPick(ks);
+      while (!ep.done) {
+        const r = ep.step(i).r;
+        if (ep.done) { upd(ks[i], r); break; }
+        const nks = ep.keys(), ni = epsPick(nks);
+        upd(ks[i], target(r, nks, ni).tgt);
+        ks = nks; i = ni;
+      }
+    },
+    greedyIndex: ep => argmax(ep.keys(), q),
+    lookupTitle: 'Busca el valor de cada situación en su tabla',
+    lookupText: 'Q estima cuánto va a juntar desde esa jugada hasta el final de la partida, como en Monte Carlo. La diferencia está en cómo lo corrige.',
+    plan(ep, ks) {
+      const best = argmax(ks, q);
+      let pick, html;
+      const chosen = pending != null && kind === 'sarsa';
+      if (chosen) { pick = pending; html = '<p>Ya la había elegido en la jugada anterior, al armar su objetivo: SARSA aprende de lo que efectivamente va a hacer.</p>'; }
+      else { const coin = rng(), ex = coin < hp.eps; pick = ex ? rng.int(ks.length) : best; html = `<p class="coin"><i>${fmt(coin)}</i> ${ex ? 'explora: una jugada al azar.' : 'aprovecha: la de mayor Q.'}</p>`; }
+      pending = null;
+      return { best, pick, order: orderBy(ks.length, i => q(ks[i])), cols: [{ h: 'Q', v: ks.map(k => Q.has(k) ? fmt(q(k), 3) : '0 <span class="muted">(nueva)</span>') }, { h: 'N', v: ks.map(k => N.get(k) || 0) }],
+        choose: { title: chosen ? 'Hace la jugada ya elegida' : 'Tira la moneda', html } };
+    },
+    learn(p, res, ep) {
+      const k = p.ks[p.pick];
+      let nextKs = null, nextPick = null, nextTxt = '';
+      if (!ep.done) {
+        nextKs = ep.keys(); nextPick = epsPick(nextKs);
+        if (kind === 'sarsa') pending = nextPick;
+        nextTxt = `<p>Ya llegó su próximo turno: tiene ${nextKs.length} jugadas posibles. ${kind === 'sarsa' ? `Elige ya cuál va a hacer (ε-greedy): ${actHTML(ep.legal()[nextPick], ep.hand())}, con Q = ${fmt(q(nextKs[nextPick]), 3)}.` : kind === 'q' ? `La mejor según su tabla vale Q = ${fmt(Math.max(...nextKs.map(q)), 3)}, la haga o no.` : 'Promedia el Q de todas, pesando por cuán probable es hacer cada una.'}</p>`;
+      }
+      const { tgt, how } = target(res.r, nextKs, nextPick), u = upd(k, tgt);
+      return [
+        { title: ep.done ? 'Última jugada: el objetivo es la recompensa' : 'Mira el turno siguiente y arma su objetivo', html: nextTxt || '<p>Terminó la partida: no hay después.</p>' },
+        { title: 'Corrige con el error TD', html: `<p>Situación: ${esc(describeKey(k))}.</p>
+          <div class="calc">objetivo = ${how}
+         = <b>${fmt(tgt, 3)}</b>
+error δ = objetivo − Q = ${fmt(tgt, 3)} − ${fmt(u.old, 3)} = <b>${fmt(tgt - u.old, 3)}</b>
+Q ← Q + α · δ = ${fmt(u.old, 3)} + ${fmt(hp.alpha)} · ${par(tgt - u.old)} = <b>${fmt(u.now, 3)}</b></div>
+          <p class="muted">No espera al final: corrige con lo que pasó hasta su próximo turno más lo que ya cree que vale lo que viene. Eso es "aprender de una estimación con otra" (bootstrapping).</p>` },
+      ];
+    },
+  };
+}
+function lesson4(root) {
+  root.innerHTML = `
+    <div><div class="eyebrow">Lección 4 · Sutton y Barto, cap. 6</div><h1>SARSA y Q-learning: aprender jugada a jugada</h1></div>
+    <p class="idea">No espera al final. Después de cada jugada compara lo que esperaba con lo que pasó más lo que espera ahora, y corrige la diferencia: el error de <b>diferencia temporal</b> (TD).</p>
+    <div class="card">
+      <h2>La idea: diferencias temporales</h2>
+      <p>Monte Carlo tenía que ver el final para saber cuánto valía una jugada. TD usa un atajo: "lo que vale esta jugada" ≈ "lo que gané hasta mi próximo turno" + "lo que creo que vale lo que viene". Si esa suma no coincide con lo que esperaba, la diferencia es el error δ y se corrige un poquito (α).</p>
+    </div>
+    <div class="card">
+      <h2>Tres formas de mirar "el turno siguiente"</h2>
+      <dl class="gloss">
+        <dt>SARSA</dt><dd>Usa el valor de la jugada que <b>efectivamente</b> va a hacer (puede ser exploratoria). Aprende cómo le va jugando como juega.</dd>
+        <dt>Q-learning</dt><dd>Usa el valor de la <b>mejor</b> jugada posible, la haga o no. Aprende cómo le iría jugando perfecto, aunque explore.</dd>
+        <dt>Expected SARSA</dt><dd>Usa el <b>promedio</b> de todas, pesado por la probabilidad de hacer cada una. Menos ruido que SARSA.</dd>
+      </dl>
+    </div>
+    <div class="card">
+      <h2>Elegí la variante</h2>
+      <div class="controls"><button class="btn" type="button" data-v="sarsa">SARSA</button><button class="btn secondary" type="button" data-v="q">Q-learning</button><button class="btn secondary" type="button" data-v="exp">Expected SARSA</button></div>
+    </div>
+    <div id="l4practice"></div>
+    <div class="card">
+      <h2>En pseudocódigo</h2>
+      <div class="code">s = situación de la jugada elegida
+r = jugar
+s' = situaciones del próximo turno
+SARSA:        objetivo = r + Q[s' elegida con ε-greedy]
+Q-learning:   objetivo = r + máx Q[s']
+Expected:     objetivo = r + Σ π(s') · Q[s']
+Q[s] = Q[s] + α · (objetivo − Q[s])</div>
+    </div>
+    <div class="card">
+      <h2>Lo bueno y lo que le falta</h2>
+      <div class="pros">
+        <div><h3>Lo bueno</h3><ul><li>Aprende en cada jugada, sin esperar al final.</li><li>Menos ruido que Monte Carlo: cada corrección mira un tramo corto.</li><li>Reparte la culpa mejor que Monte Carlo.</li></ul></div>
+        <div><h3>Lo que le falta</h3><ul><li>Aprende de sus propias estimaciones: si están mal, se equivoca con confianza.</li><li>En CuBirds las tablas quedan abajo del ranking: la diferencia entre jugadas de un mismo turno es chica, y la clave de 8 rasgos no ve todo el estado.</li><li>Q-learning tiende a ser demasiado optimista con estimaciones ruidosas: Double Q-learning lo corrige con dos tablas.</li></ul></div>
+      </div>
+      <div class="elos" data-elos="tabla:sb_sarsa,tabla:sb_q_learning,tabla:sb_expected_sarsa,tabla:sb_double_q"></div>
+    </div>
+    <div class="next">
+      <a class="btn secondary" href="lab.html#q_learning">Verlo entrenar en el Laboratorio</a>
+      <button class="btn" type="button" data-go="5">Lección 5: n pasos y trazas →</button>
+    </div>`;
+  const host = $('l4practice');
+  const showAlg = v => {
+    host.innerHTML = '';
+    practice(host, TDAgent(v), [{ k: 'eps', label: 'ε', min: 0, max: 0.5, step: 0.05 }, { k: 'alpha', label: 'α', min: 0.01, max: 0.3, step: 0.01 }]);
+    root.querySelectorAll('[data-v]').forEach(b => b.className = `btn ${b.dataset.v === v ? '' : 'secondary'}`);
+  };
+  root.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) showAlg(b.dataset.v); });
+  showAlg('sarsa');
+}
+
+// ===================== n pasos y trazas =====================
+function MultiStep(kind) {
+  const Q = new Map(), N = new Map(), rng = seed(29), hp = { eps: 0.1, alpha: 0.05, n: 3, lambda: 0.8 };
+  const q = k => Q.get(k) || 0;
+  const epsPick = ks => rng() < hp.eps ? rng.int(ks.length) : argmax(ks, q);
+  let traj = [], z = new Map();
+  function upd(k, tgt) { const old = q(k); Q.set(k, old + hp.alpha * (tgt - old)); N.set(k, (N.get(k) || 0) + 1); return { old, now: q(k), tgt }; }
+  // n pasos: corrige la jugada de hace n turnos con n recompensas reales y Q de la de ahora
+  function nstep(tau, bootK) {
+    const n = Math.round(hp.n), end = Math.min(tau + n, traj.length);
+    let G = 0; for (let i = tau; i < end; i++) G += traj[i].r;
+    if (bootK != null) G += q(bootK);
+    return Object.assign(upd(traj[tau].k, G), { tau });
+  }
+  function lambdaStep(k, r, nextK) {
+    const delta = r + (nextK != null ? q(nextK) : 0) - q(k);
+    for (const [x, zx] of z) z.set(x, zx * hp.lambda);
+    z.set(k, 1);
+    const changes = [];
+    for (const [x, zx] of z) { const old = q(x); Q.set(x, old + hp.alpha * delta * zx); changes.push({ k: x, z: zx, old, now: q(x) }); }
+    N.set(k, (N.get(k) || 0) + 1);
+    return { delta, changes };
+  }
+  return {
+    rng, hp, learnCount: 2, reset: () => { Q.clear(); N.clear(); traj = []; z = new Map(); }, size: () => `situaciones en la tabla: <b>${Q.size}</b>`,
+    onEpisodeStart() { traj = []; z = new Map(); },
+    trainEpisode(ep) {
+      traj = []; z = new Map();
+      let ks = ep.keys(), i = epsPick(ks);
+      while (!ep.done) {
+        const r = ep.step(i).r;
+        traj.push({ k: ks[i], r });
+        const nks = ep.done ? null : ep.keys(), ni = nks ? epsPick(nks) : null;
+        if (kind === 'lambda') lambdaStep(ks[i], r, nks ? nks[ni] : null);
+        else if (traj.length >= Math.round(hp.n)) nstep(traj.length - Math.round(hp.n), nks ? nks[ni] : null);
+        if (!nks) break;
+        ks = nks; i = ni;
+      }
+      if (kind !== 'lambda') for (let t = Math.max(0, traj.length - Math.round(hp.n) + 1); t < traj.length; t++) nstep(t, null);
+    },
+    greedyIndex: ep => argmax(ep.keys(), q),
+    lookupTitle: 'Busca el valor de cada situación',
+    lookupText: 'Como en SARSA, Q estima cuánto va a juntar hasta el final. Cambia a quién corrige cada error.',
+    plan(ep, ks) {
+      const best = argmax(ks, q), coin = rng(), ex = coin < hp.eps, pick = ex ? rng.int(ks.length) : best;
+      return { best, pick, order: orderBy(ks.length, i => q(ks[i])), cols: [{ h: 'Q', v: ks.map(k => fmt(q(k), 3)) }, { h: 'N', v: ks.map(k => N.get(k) || 0) }],
+        choose: { title: 'Tira la moneda', html: `<p class="coin"><i>${fmt(coin)}</i> ${ex ? 'explora: una jugada al azar.' : 'aprovecha: la de mayor Q.'}</p>` } };
+    },
+    learn(p, res, ep) {
+      const k = p.ks[p.pick];
+      traj.push({ k, r: res.r });
+      const nextK = ep.done ? null : (() => { const ks = ep.keys(); return ks[argmax(ks, q)]; })();
+      if (kind === 'lambda') {
+        const u = lambdaStep(k, res.r, nextK);
+        return [{ title: 'Calcula la sorpresa de la jugada', html: `<div class="calc">δ = r + Q(siguiente) − Q(esta) = ${fmt(res.r, 3)} + ${fmt(nextK != null ? q(nextK) : 0, 3)} − … = <b>${fmt(u.delta, 3)}</b></div>` },
+          { title: 'Reparte la sorpresa hacia atrás según las huellas', html: `<p>Esta jugada tiene huella 1. Cada jugada anterior de la partida conserva una huella que se multiplica por λ = ${fmt(hp.lambda)} cada vez. La sorpresa δ corrige a todas: Q ← Q + α · δ · huella.</p>
+          <div class="scroll"><table class="dec"><thead><tr><th>Situación</th><th>Huella</th><th>Q antes → después</th></tr></thead><tbody>${u.changes.slice(-6).reverse().map(c => `<tr><td class="sit">${esc(describeKey(c.k))}</td><td class="num">${fmt(c.z, 3)}</td><td class="num">${fmt(c.old, 3)} → <b>${fmt(c.now, 3)}</b></td></tr>`).join('')}</tbody></table></div>` }];
+      }
+      const n = Math.round(hp.n), ups = [];
+      if (traj.length >= n) ups.push(nstep(traj.length - n, nextK));
+      if (ep.done) for (let t = Math.max(0, traj.length - n + 1); t < traj.length; t++) ups.push(nstep(t, null));
+      return [{ title: 'Anota la recompensa', html: `<p>Lleva ${traj.length} jugada${traj.length === 1 ? '' : 's'} en esta partida; las recompensas de las últimas: ${traj.slice(-n).map(t => fmt(t.r, 3)).join(', ')}.</p>` },
+        { title: ups.length ? `Corrige la jugada de hace ${n} turnos` : 'Espera a juntar n jugadas', html: `<p>Con n = ${n}, cada jugada se corrige recién cuando conoce las recompensas reales de ${n} jugadas; para lo que sigue después usa su estimación Q.${ep.done ? ' Al terminar la partida corrige las que quedaban, sin estimación.' : ''}</p>
+          ${ups.map(u => `<div class="calc">jugada #${u.tau + 1}: objetivo = ${fmt(u.tgt, 3)};  Q = ${fmt(u.old, 3)} → <b>${fmt(u.now, 3)}</b></div>`).join('')}` }];
+    },
+  };
+}
+function lesson5(root) {
+  root.innerHTML = `
+    <div><div class="eyebrow">Lección 5 · Sutton y Barto, cap. 7 y 12</div><h1>n pasos y trazas</h1></div>
+    <p class="idea">Monte Carlo espera al final (mucho ruido); TD mira un solo paso (mucho sesgo). Hay un punto medio: mirar unos cuantos pasos reales, o repartir cada sorpresa entre las jugadas recientes.</p>
+    <div class="card">
+      <h2>El problema de la asignación de crédito</h2>
+      <p>Ganó la partida. ¿Fue por la bandada de la última jugada, o por los tres loros que se llevó seis turnos antes? TD de un paso tarda muchas partidas en hacer llegar esa información hacia atrás. Hay dos formas de acelerarlo.</p>
+    </div>
+    <div class="card">
+      <h2>Dos soluciones</h2>
+      <dl class="gloss">
+        <dt>n pasos</dt><dd>Corrige cada jugada con las recompensas reales de las n jugadas siguientes y recién ahí usa su estimación. n = 1 es TD; n = ∞ es Monte Carlo.</dd>
+        <dt>Trazas (λ)</dt><dd>Cada jugada deja una "huella" que se va borrando de a poco (×λ). Cada sorpresa corrige a todas las jugadas con huella, más a las recientes.</dd>
+      </dl>
+    </div>
+    <div class="card">
+      <h2>Elegí la variante</h2>
+      <div class="controls"><button class="btn" type="button" data-v="n">n pasos</button><button class="btn secondary" type="button" data-v="lambda">Trazas λ</button></div>
+    </div>
+    <div id="l5practice"></div>
+    <div class="card">
+      <h2>Lo bueno y lo que les falta</h2>
+      <div class="pros">
+        <div><h3>Lo bueno</h3><ul><li>La información llega mucho más rápido a las jugadas que la provocaron.</li><li>Ajustando n o λ se elige el punto justo entre ruido y sesgo.</li><li>Las trazas son la base de TD-Gammon (lección 7).</li></ul></div>
+        <div><h3>Lo que les falta</h3><ul><li>Un parámetro más para ajustar.</li><li>Siguen siendo tablas: no generalizan entre situaciones parecidas. En CuBirds quedan junto a las demás tablas.</li></ul></div>
+      </div>
+      <div class="elos" data-elos="tabla:sb_sarsa_n,tabla:sb_tree_backup,tabla:sb_sarsa_lambda,tabla:sb_q_lambda"></div>
+    </div>
+    <div class="next">
+      <a class="btn secondary" href="lab.html#sarsa_lambda">Verlo entrenar en el Laboratorio</a>
+      <button class="btn" type="button" data-go="6">Lección 6: Dyna-Q →</button>
+    </div>`;
+  const host = $('l5practice');
+  const showAlg = v => {
+    host.innerHTML = '';
+    practice(host, MultiStep(v), v === 'n' ? [{ k: 'n', label: 'n', min: 1, max: 8, step: 1 }, { k: 'alpha', label: 'α', min: 0.01, max: 0.3, step: 0.01 }] : [{ k: 'lambda', label: 'λ', min: 0, max: 1, step: 0.05 }, { k: 'alpha', label: 'α', min: 0.01, max: 0.3, step: 0.01 }]);
+    root.querySelectorAll('[data-v]').forEach(b => b.className = `btn ${b.dataset.v === v ? '' : 'secondary'}`);
+  };
+  root.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) showAlg(b.dataset.v); });
+  showAlg('n');
+}
+
+// ===================== Dyna-Q =====================
+function DynaAgent() {
+  const Q = new Map(), N = new Map(), rng = seed(31), hp = { eps: 0.1, alpha: 0.05, plan: 5 };
+  const q = k => Q.get(k) || 0;
+  const model = new Map(), visited = [];
+  const epsPick = ks => rng() < hp.eps ? rng.int(ks.length) : argmax(ks, q);
+  function upd(k, tgt) { const old = q(k); Q.set(k, old + hp.alpha * (tgt - old)); N.set(k, (N.get(k) || 0) + 1); return { old, now: q(k) }; }
+  function remember(k, r, nextKs) { if (!model.has(k)) { model.set(k, []); visited.push(k); } const b = model.get(k); if (b.length < 30) b.push([r, nextKs]); else b[rng.int(30)] = [r, nextKs]; }
+  function dream(record) {
+    const out = [];
+    for (let i = 0; i < Math.round(hp.plan) && visited.length; i++) {
+      const k = visited[rng.int(visited.length)], [r, nx] = model.get(k)[rng.int(model.get(k).length)];
+      const tgt = nx ? r + Math.max(...nx.map(q)) : r, old = q(k);
+      Q.set(k, old + hp.alpha * (tgt - old));
+      if (record && out.length < 4) out.push({ k, tgt, old, now: q(k) });
+    }
+    return out;
+  }
+  function learnStep(k, r, nextKs) {
+    const tgt = nextKs ? r + Math.max(...nextKs.map(q)) : r, u = upd(k, tgt);
+    remember(k, r, nextKs);
+    return { tgt, u };
+  }
+  return {
+    rng, hp, learnCount: 3, reset: () => { Q.clear(); N.clear(); model.clear(); visited.length = 0; }, size: () => `situaciones en la tabla: <b>${Q.size}</b> · en el modelo: <b>${visited.length}</b>`,
+    trainEpisode(ep) {
+      while (!ep.done) {
+        const ks = ep.keys(), i = epsPick(ks), r = ep.step(i).r;
+        learnStep(ks[i], r, ep.done ? null : ep.keys());
+        dream(false);
+      }
+    },
+    greedyIndex: ep => argmax(ep.keys(), q),
+    lookupTitle: 'Busca el valor de cada situación',
+    lookupText: 'La tabla es la de Q-learning. Lo nuevo viene después de jugar.',
+    plan(ep, ks) {
+      const best = argmax(ks, q), coin = rng(), ex = coin < hp.eps, pick = ex ? rng.int(ks.length) : best;
+      return { best, pick, order: orderBy(ks.length, i => q(ks[i])), cols: [{ h: 'Q', v: ks.map(k => fmt(q(k), 3)) }, { h: 'N', v: ks.map(k => N.get(k) || 0) }],
+        choose: { title: 'Tira la moneda', html: `<p class="coin"><i>${fmt(coin)}</i> ${ex ? 'explora.' : 'aprovecha: la de mayor Q.'}</p>` } };
+    },
+    learn(p, res, ep) {
+      const k = p.ks[p.pick], nextKs = ep.done ? null : ep.keys();
+      const { tgt, u } = learnStep(k, res.r, nextKs);
+      const dreams = dream(true), b = model.get(k);
+      return [
+        { title: 'Aprende de lo que le pasó (Q-learning)', html: `<div class="calc">objetivo = r + máx Q(turno siguiente) = <b>${fmt(tgt, 3)}</b>
+Q = ${fmt(u.old, 3)} → <b>${fmt(u.now, 3)}</b></div>` },
+        { title: 'Lo guarda en su modelo del juego', html: `<p>El modelo es una memoria: para cada situación guarda qué pasó las veces que la jugó (qué recompensa recibió y qué opciones tuvo después). Esta situación ya tiene <b>${b.length}</b> recuerdo${b.length === 1 ? '' : 's'}.</p>` },
+        { title: `Sueña: repasa ${Math.round(hp.plan)} recuerdos al azar`, html: dreams.length ? `<p>Sin jugar nada nuevo, elige recuerdos guardados al azar y vuelve a aprender de ellos. ${dreams.length < Math.round(hp.plan) ? `Se muestran los primeros ${dreams.length}.` : ''}</p>
+          <div class="scroll"><table class="dec"><thead><tr><th>Recuerdo</th><th>Objetivo</th><th>Q antes → después</th></tr></thead><tbody>${dreams.map(d => `<tr><td class="sit">${esc(describeKey(d.k))}</td><td class="num">${fmt(d.tgt, 3)}</td><td class="num">${fmt(d.old, 3)} → <b>${fmt(d.now, 3)}</b></td></tr>`).join('')}</tbody></table></div>` : '<p>Con 0 repasos, es Q-learning puro.</p>' },
+      ];
+    },
+  };
+}
+function lesson6(root) {
+  root.innerHTML = `
+    <div><div class="eyebrow">Lección 6 · Sutton y Barto, cap. 8</div><h1>Dyna-Q: planificar con un modelo aprendido</h1></div>
+    <p class="idea">Además de aprender de lo que juega, guarda lo que le pasó en una memoria y, entre jugada y jugada, "sueña": repasa experiencias viejas como si las volviera a vivir.</p>
+    <div class="card">
+      <h2>Experiencia real y experiencia imaginada</h2>
+      <p>Cada partida real cuesta tiempo. Un recuerdo repasado no cuesta nada. Dyna-Q aprovecha cada experiencia muchas veces: después de cada jugada real hace n repasos de Q-learning sobre recuerdos al azar.</p>
+    </div>`;
+  practice(root, DynaAgent(), [{ k: 'plan', label: 'repasos por jugada', min: 0, max: 30, step: 1 }]);
+  root.insertAdjacentHTML('beforeend', `
+    <div class="card">
+      <h2>En pseudocódigo</h2>
+      <div class="code">después de cada jugada real (s, r, s'):
+    Q[s] += α (r + máx Q[s'] − Q[s])         # Q-learning
+    modelo[s].guardar((r, s'))
+    repetir n veces:
+        s, (r, s') = un recuerdo al azar
+        Q[s] += α (r + máx Q[s'] − Q[s])     # repaso</div>
+    </div>
+    <div class="card">
+      <h2>Lo bueno y lo que le falta</h2>
+      <div class="pros">
+        <div><h3>Lo bueno</h3><ul><li>Aprende más con menos partidas reales.</li><li>Separa aprender, modelar y planificar: una idea que vuelve en AlphaZero.</li></ul></div>
+        <div><h3>Lo que le falta</h3><ul><li>El modelo sólo sabe lo que vio.</li><li>Si los rivales cambian, los recuerdos viejos engañan.</li><li>Repasar al azar desperdicia tiempo; el barrido priorizado repasa primero lo sorpresivo.</li></ul></div>
+      </div>
+      <div class="elos" data-elos="tabla:sb_dyna_q,tabla:sb_prioritized_sweeping"></div>
+    </div>
+    <div class="next">
+      <a class="btn secondary" href="lab.html#dyna_q">Verlo entrenar en el Laboratorio</a>
+      <button class="btn" type="button" data-go="7">Lección 7: aproximación de funciones →</button>
+    </div>`);
+}
+
+// ===================== características (las 65 de cubirds/rl/features.py) =====================
+const FEATURE_NAMES = [
+  ...SPECIES.map(s => `mano: ${s}`), ...SPECIES.map(s => `colección: ${s}`), 'bandadas que le faltan', ...SPECIES.map(s => `rivales: ${s} en colección`),
+  'bandadas que le faltan al mejor rival', 'cartas en mano de los rivales', 'cartas en su mano', 'cartas en el mazo', 'jugadores en la mesa',
+  'fase: jugar', 'fase: robar', 'fase: bandada',
+  ...SPECIES.map(s => `juega ${s}`), 'es una jugada', 'cartas que juega', 'pájaros que se lleva', ...SPECIES.map(s => `se lleva ${s}`),
+  'bandadas chicas posibles después', 'bandadas grandes posibles después', 'mejora de la mano (Coleccionista)', 'mejora de la mano (Afinado)',
+  'no encierra nada (puede robar)', 'largo de la fila después', 'roba 2', 'no roba', 'forma bandada', 'guarda en la colección',
+  'la bandada acerca a ganar', 'no forma bandada', 'colección de esa especie después'];
+const dot = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * b[i]; return s; };
+function weightBars(w, top = 12, onlyAction = false) {
+  const idx = w.map((v, i) => [Math.abs(v), i]).filter(([, i]) => !onlyAction || i >= E.G_DIM).sort((a, b) => b[0] - a[0]).slice(0, top).map(x => x[1]);
+  const mx = Math.max(1e-6, ...idx.map(i => Math.abs(w[i])));
+  return `<div class="bars">${idx.map(i => {
+    const pct = Math.abs(w[i]) / mx * 50, pos = w[i] >= 0;
+    return `<div class="bar"><span title="${esc(FEATURE_NAMES[i])}">${esc(FEATURE_NAMES[i])}</span><div class="track"><i style="${pos ? `left:50%;width:${pct}%` : `right:50%;width:${pct}%`};background:var(${pos ? '--s1' : '--bad'})"></i></div><b>${w[i] > 0 ? '+' : ''}${fmt(w[i], 3)}</b></div>`;
+  }).join('')}</div>`;
+}
+
+// ===================== Lección 7: aproximación lineal =====================
+function LinearAgent() {
+  const rng = seed(37), hp = { eps: 0.1, alpha: 0.01 };
+  let w = new Array(E.DIM).fill(0), b = 0, pending = null;
+  const v = x => dot(w, x) + b;
+  const epsPick = X => rng() < hp.eps ? rng.int(X.length) : argmax(X, v);
+  function sgd(x, tgt) { const d = tgt - v(x); for (let i = 0; i < x.length; i++) w[i] += hp.alpha * d * x[i]; b += hp.alpha * d; return d; }
+  return {
+    rng, hp, learnCount: 2, reset: () => { w = new Array(E.DIM).fill(0); b = 0; pending = null; }, size: () => `pesos: <b>${E.DIM}</b> + 1`,
+    onEpisodeStart() { pending = null; },
+    trainEpisode(ep) {
+      let X = ep.feats(), i = epsPick(X);
+      while (!ep.done) {
+        const r = ep.step(i).r;
+        if (ep.done) { sgd(X[i], r); break; }
+        const X1 = ep.feats(), i1 = epsPick(X1);
+        sgd(X[i], r + v(X1[i1]));
+        X = X1; i = i1;
+      }
+    },
+    greedyIndex: ep => argmax(ep.feats(), v),
+    showNote: 'las de mayor valor estimado',
+    lookupTitle: 'Calcula el valor de cada jugada con la fórmula',
+    lookupText: `No busca en una tabla: describe cada jugada con ${E.DIM} números (los de la lección 0 son sólo un resumen) y calcula v̂ = w · x, la suma de cada característica por su peso. Dos jugadas parecidas dan valores parecidos aunque nunca haya visto ninguna de las dos.`,
+    plan(ep, ks) {
+      const X = ep.feats(), vals = X.map(v), best = argmax(vals);
+      let pick, html;
+      if (pending != null) { pick = pending; html = '<p>La eligió en la jugada anterior, al armar su objetivo (como SARSA).</p>'; }
+      else { const coin = rng(), ex = coin < hp.eps; pick = ex ? rng.int(X.length) : best; html = `<p class="coin"><i>${fmt(coin)}</i> ${ex ? 'explora: una jugada al azar.' : 'aprovecha: la de mayor v̂.'}</p>`; }
+      pending = null;
+      const x = X[pick], contrib = x.map((xi, i) => [xi * w[i], i]).filter(c => Math.abs(c[0]) > 1e-9).sort((a, c) => Math.abs(c[0]) - Math.abs(a[0])).slice(0, 5);
+      html += contrib.length ? `<p>Las características que más pesaron en su valor:</p><div class="calc">${contrib.map(([c, i]) => `${FEATURE_NAMES[i]}: ${fmt(x[i], 2)} × ${fmt(w[i], 3)} = ${fmt(c, 3)}`).join('\n')}</div>` : '<p class="muted">Todavía todos los pesos valen 0: todas las jugadas valen lo mismo.</p>';
+      return { X, best, pick, order: orderBy(X.length, i => vals[i]), cols: [{ h: 'v̂', v: vals.map(x2 => fmt(x2, 3)) }], choose: { title: 'Elige con ε-greedy', html } };
+    },
+    learn(p, res, ep) {
+      const x = p.X[p.pick], old = v(x);
+      let tgt = res.r, nextTxt = '<p>Terminó la partida: el objetivo es sólo la recompensa.</p>';
+      if (!ep.done) { const X1 = ep.feats(); pending = epsPick(X1); tgt = res.r + v(X1[pending]); nextTxt = `<p>Llegó su próximo turno y ya elige qué hacer (ε-greedy): esa jugada vale v̂ = ${fmt(v(X1[pending]), 3)}.</p>`; }
+      const others = p.X.map((xx, i) => [i, v(xx)]);
+      const wOld = w.slice(), d = sgd(x, tgt);
+      const changed = w.map((wi, i) => [wi - wOld[i], i]).sort((a, c) => Math.abs(c[0]) - Math.abs(a[0])).slice(0, 4).filter(c => Math.abs(c[0]) > 1e-9);
+      const moved = others.filter(([i]) => i !== p.pick).map(([i, vb]) => [i, v(p.X[i]) - vb]).sort((a, c) => Math.abs(c[1]) - Math.abs(a[1])).slice(0, 3);
+      return [
+        { title: 'Calcula la sorpresa y mueve los pesos', html: `${nextTxt}<div class="calc">objetivo = r + v̂(siguiente) = <b>${fmt(tgt, 3)}</b>
+δ = objetivo − v̂ = ${fmt(tgt, 3)} − ${fmt(old, 3)} = <b>${fmt(d, 3)}</b>
+cada peso:  w ← w + α · δ · x</div>${changed.length ? `<p>Los pesos que más se movieron:</p><div class="calc">${changed.map(([c, i]) => `${FEATURE_NAMES[i]}: ${c > 0 ? '+' : ''}${fmt(c, 4)}`).join('\n')}</div>` : ''}` },
+        { title: 'Mira qué pasó con las demás jugadas: generalizó', html: `<p>Sólo hizo una jugada, pero como los pesos son compartidos, <b>cambió el valor de todas</b>: las que se parecen a la jugada en las características que se movieron cambiaron más. Una tabla nunca haría esto.</p>
+          ${moved.length ? `<div class="calc">${moved.map(([i, dv]) => `${actText(p.legal[i], p.hand)}: ${dv > 0 ? '+' : ''}${fmt(dv, 4)}`).join('\n')}</div>` : ''}` },
+      ];
+    },
+    weights: () => w,
+  };
+}
+function lesson7(root) {
+  const A = LinearAgent();
+  root.innerHTML = `
+    <div><div class="eyebrow">Lección 7 · Sutton y Barto, cap. 9 a 12 y 16.1</div><h1>Aproximación de funciones: de tablas a pesos</h1></div>
+    <p class="idea">En vez de una tabla con un casillero por situación, una fórmula: cada jugada se describe con muchos números y el valor es la suma de cada número por su peso. Lo que aprende de una jugada le sirve para todas las parecidas.</p>
+    <div class="card">
+      <h2>El techo de las tablas</h2>
+      <p>Las tablas de las lecciones 1 a 6 quedaron todas en la mitad de abajo del ranking. Dos razones: la clave de 8 rasgos no ve casi nada del estado (qué especies tiene en la mano, qué colecciona el rival), y cada casillero aprende solo, sin ayuda de los vecinos.</p>
+    </div>
+    <div class="card">
+      <h2>La idea: un peso por característica</h2>
+      <p>Cada jugada se describe con <b>${E.DIM} números</b>: cuántas cartas tiene de cada especie, qué colecciona cada uno, qué especie juega, cuántos pájaros se lleva y de cuáles, cuánto mejora su mano según Coleccionista y según Afinado, etc. El valor estimado es v̂ = w · x. Aprender es mover los pesos w.</p>
+      <p>Así el agente generaliza: si aprendió que llevarse loros cuando tiene 3 en la mano es bueno, ya sabe algo de llevarse patos cuando tiene 3, porque comparten pesos como "mejora de la mano".</p>
+    </div>
+    <div class="card">
+      <h2>Y después: redes neuronales</h2>
+      <p>La fórmula lineal no capta combinaciones ("esto es bueno sólo si además..."). Una red neuronal sí: TD-Gammon (Tesauro, 1992) usó la misma idea de esta lección con una red y trazas, y aprendió a jugar al backgammon a nivel campeón. En CuBirds, TD-Gammon queda en la mitad de arriba del ranking.</p>
+    </div>`;
+  practice(root, A, [{ k: 'eps', label: 'ε', min: 0, max: 0.5, step: 0.05 }, { k: 'alpha', label: 'α', min: 0.001, max: 0.05, step: 0.001 }]);
+  root.insertAdjacentHTML('beforeend', `
+    <div class="card">
+      <h2>Qué aprendió</h2>
+      <p class="muted">Los pesos que más se apartaron de cero (azul: suben el valor; rojo: lo bajan). Entrenalo y volvé a tocar el botón.</p>
+      <div id="l7w"></div>
+      <div class="controls"><button class="btn secondary" type="button" id="l7wb">Ver los pesos</button></div>
+    </div>
+    <div class="card">
+      <h2>En pseudocódigo (SARSA semi-gradiente)</h2>
+      <div class="code">x = características de la jugada elegida
+r = jugar
+x' = características de la jugada siguiente (ε-greedy)
+δ = r + w·x' − w·x
+w = w + α · δ · x</div>
+    </div>
+    <div class="card">
+      <h2>Lo bueno y lo que le falta</h2>
+      <div class="pros">
+        <div><h3>Lo bueno</h3><ul><li>Generaliza: aprende de pocas jugadas y lo aplica a situaciones que nunca vio.</li><li>Las características incluyen el estado, así que puede descontar el potencial con que venía la partida: el sesgo que arruinaba a las tablas desaparece.</li><li>LSTD, que resuelve los pesos de una vez, queda entre los primeros del ranking.</li></ul></div>
+        <div><h3>Lo que le falta</h3><ul><li>Lo lineal no capta combinaciones; para eso hacen falta redes.</li><li>Off-policy y con aproximación (Q-learning lineal), TD puede volverse inestable: la "tríada mortal" del cap. 11.</li><li>Elegir buenas características es la mitad del trabajo.</li></ul></div>
+      </div>
+      <div class="elos" data-elos="lineal:sb_lstd,lineal:sb_q_semigradiente,lineal:sb_sarsa_semigradiente,lineal:sb_true_online_sarsa_lambda,valor:sb_td_gammon,lineal:sb_mc_gradiente"></div>
+    </div>
+    <div class="next">
+      <a class="btn secondary" href="lab.html#lstd">LSTD en el Laboratorio</a>
+      <button class="btn" type="button" data-go="8">Lección 8: REINFORCE y actor-crítico →</button>
+    </div>`);
+  const showW = () => { $('l7w').innerHTML = weightBars(A.weights()); };
+  $('l7wb').addEventListener('click', showW);
+  showW();
+}
+
+// ===================== Lección 8: gradiente de política =====================
+function PolicyAgent(kind) {
+  const rng = seed(41), hp = { alpha: 0.05, alphaW: 0.02 };
+  let th = new Array(E.DIM).fill(0), u = new Array(E.G_DIM + 1).fill(0), diary = [];
+  const probs = X => { const h = X.map(x => dot(x, th)), m = Math.max(...h), e = h.map(v => Math.exp(v - m)), s = sum(e); return e.map(v => v / s); };
+  const g = X => X[0].slice(0, E.G_DIM).concat(1);
+  const sample = p => { let r = rng(), i = 0; for (; i < p.length - 1; i++) { r -= p[i]; if (r <= 0) break; } return i; };
+  const gradLog = (X, p, j) => { const gr = X[j].slice(); X.forEach((x, i) => { for (let m = 0; m < gr.length; m++) gr[m] -= p[i] * x[m]; }); return gr; };
+  function acStep(X, j, r, X1) {
+    const gs = g(X), V = dot(u, gs), V1 = X1 ? dot(u, g(X1)) : 0, delta = r + V1 - V;
+    for (let i = 0; i < u.length; i++) u[i] += hp.alphaW * delta * gs[i];
+    const p = probs(X), gr = gradLog(X, p, j);
+    for (let m = 0; m < th.length; m++) th[m] += hp.alpha * delta * gr[m];
+    return { V, V1, delta, pBefore: p[j], pAfter: probs(X)[j] };
+  }
+  function reinforce(traj) {
+    let G = 0;
+    const out = [];
+    for (let t = traj.length - 1; t >= 0; t--) {
+      const { X, j, r } = traj[t];
+      G += r;
+      const gs = g(X), base = dot(u, gs), delta = G - base;
+      for (let i = 0; i < u.length; i++) u[i] += hp.alphaW * delta * gs[i];
+      const p = probs(X), gr = gradLog(X, p, j);
+      for (let m = 0; m < th.length; m++) th[m] += hp.alpha * delta * gr[m];
+      out.unshift({ n: t + 1, G, base, delta, p0: p[j], p1: probs(X)[j] });
+    }
+    return out;
+  }
+  return {
+    rng, hp, learnCount: kind === 'ac' ? 2 : 1, reset: () => { th = new Array(E.DIM).fill(0); u = new Array(E.G_DIM + 1).fill(0); diary = []; }, size: () => `pesos del actor: <b>${E.DIM}</b> · del crítico: <b>${E.G_DIM + 1}</b>`,
+    onEpisodeStart() { diary = []; },
+    trainEpisode(ep) {
+      const traj = [];
+      while (!ep.done) {
+        const X = ep.feats(), j = sample(probs(X)), r = ep.step(j).r;
+        if (kind === 'ac') acStep(X, j, r, ep.done ? null : ep.feats()); else traj.push({ X, j, r });
+      }
+      if (kind !== 'ac') reinforce(traj);
+    },
+    greedyIndex: ep => argmax(ep.feats().map(x => dot(x, th))),
+    showNote: 'las más probables',
+    lookupTitle: 'Calcula la probabilidad de cada jugada',
+    lookupText: 'No estima valores: tiene una preferencia lineal h = θ · x por cada jugada y las convierte en probabilidades con un softmax. Lo que aprende es directamente <b>qué tan seguido hacer cada cosa</b>.',
+    plan(ep) {
+      const X = ep.feats(), p = probs(X), best = argmax(p), r = rng();
+      let acc = r, pick = 0; for (; pick < p.length - 1; pick++) { acc -= p[pick]; if (acc <= 0) break; }
+      return { X, best, pick, order: orderBy(X.length, i => p[i]), cols: [{ h: 'π', v: p.map(x => `${fmt(x * 100, 1)}%`) }],
+        choose: { title: 'Sortea según las probabilidades', html: `<p class="coin"><i>${fmt(r)}</i> el número cae en ${actHTML(ep.legal()[pick], ep.hand())} (π = ${fmt(p[pick] * 100, 1)}%).</p><p class="muted">La política misma decide cuánto explora: si está segura, casi siempre hace lo mismo; si duda, reparte.</p>` } };
+    },
+    learn(p, res, ep) {
+      if (kind === 'ac') {
+        const s = acStep(p.X, p.pick, res.r, ep.done ? null : ep.feats());
+        return [
+          { title: 'El crítico juzga la jugada', html: `<p>El crítico estima cuánto espera juntar desde el estado (V). Compara lo que esperaba antes de jugar con lo que pasó más lo que espera ahora:</p>
+            <div class="calc">δ = r + V(después) − V(antes) = ${fmt(res.r, 3)} + ${fmt(s.V1, 3)} − ${fmt(s.V, 3)} = <b>${fmt(s.delta, 3)}</b></div>` },
+          { title: 'El actor ajusta su política', html: `<p>El actor mueve sus preferencias en la dirección que hace más probable la jugada hecha, multiplicada por δ: si salió mejor de lo esperado la refuerza, si salió peor la castiga.</p>
+            <div class="calc">θ ← θ + α · δ · ∇ ln π(jugada)
+π(jugada): ${fmt(s.pBefore * 100, 2)}% → <b>${fmt(s.pAfter * 100, 2)}%</b></div>` },
+        ];
+      }
+      diary.push({ X: p.X, j: p.pick, r: res.r });
+      return [{ title: 'Todavía no aprende: anota la jugada', html: `<p>REINFORCE es Monte Carlo para políticas: necesita saber cómo terminó la partida. Por ahora anota la jugada y su recompensa (${fmt(res.r, 3)}).</p>` }];
+    },
+    endEpisode() {
+      if (kind === 'ac') return [];
+      const rows = reinforce(diary);
+      return [{ title: 'Termina la partida: refuerza cada jugada según cómo terminó', html: `<p>Para cada jugada calcula G (todo lo que juntó desde ahí) y lo compara con la <b>línea de base</b> b, lo que el crítico esperaba en esa situación. Si G − b es positivo, la jugada se vuelve más probable; si es negativo, menos.</p>
+        <div class="scroll"><table class="dec"><thead><tr><th>#</th><th>G</th><th>b</th><th>G − b</th><th>π antes → después</th></tr></thead><tbody>${rows.map(r => `<tr><td>${r.n}</td><td class="num">${fmt(r.G, 3)}</td><td class="num">${fmt(r.base, 3)}</td><td class="num"><b>${fmt(r.delta, 3)}</b></td><td class="num">${fmt(r.p0 * 100, 1)}% → ${fmt(r.p1 * 100, 1)}%</td></tr>`).join('')}</tbody></table></div>` }];
+    },
+  };
+}
+function lesson8(root) {
+  root.innerHTML = `
+    <div><div class="eyebrow">Lección 8 · Sutton y Barto, cap. 13</div><h1>REINFORCE y actor-crítico: aprender la política directamente</h1></div>
+    <p class="idea">En vez de aprender cuánto vale cada jugada y elegir la mejor, aprende directamente con qué probabilidad hacer cada una. Si algo salió mejor de lo esperado, lo hace más seguido.</p>
+    <div class="card">
+      <h2>Por qué aprender la política</h2>
+      <p>Los métodos de valor eligen siempre la jugada de mayor valor estimado, y un error chico en la estimación puede cambiar la decisión de golpe. Una política con probabilidades cambia suave, explora sola cuando duda y se puede mejorar siguiendo el gradiente: la dirección que sube la recompensa esperada (el teorema del gradiente de política).</p>
+    </div>
+    <div class="card">
+      <h2>Dos variantes</h2>
+      <dl class="gloss">
+        <dt>REINFORCE</dt><dd>Espera al final de la partida (Monte Carlo) y refuerza cada jugada según G − b, lo que juntó desde ahí menos una línea de base que estima un crítico.</dd>
+        <dt>Actor-crítico</dt><dd>No espera: en cada jugada el crítico calcula la sorpresa δ (como TD) y el actor la usa para ajustar la política.</dd>
+      </dl>
+      <div class="controls"><button class="btn" type="button" data-v="r">REINFORCE</button><button class="btn secondary" type="button" data-v="ac">Actor-crítico</button></div>
+    </div>
+    <div id="l8practice"></div>
+    <div class="card">
+      <h2>En pseudocódigo</h2>
+      <div class="pros">
+        <div><h3>REINFORCE con línea de base</h3><div class="code">jugar la partida sorteando con π
+para cada jugada, de atrás para adelante:
+    G = G + r
+    δ = G − V(s)
+    V: u += α_w δ ∇V
+    θ += α δ ∇ ln π(a)</div></div>
+        <div><h3>Actor-crítico</h3><div class="code">en cada jugada:
+    δ = r + V(s') − V(s)
+    u += α_w δ ∇V(s)
+    θ += α δ ∇ ln π(a)</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Lo bueno y lo que les falta</h2>
+      <div class="pros">
+        <div><h3>Lo bueno</h3><ul><li>Aprenden qué hacer, no cuánto vale: la decisión cambia suave.</li><li>La exploración está en el sorteo y se apaga sola.</li><li>Son la base de PPO, el mejor agente que aprende sólo jugando.</li></ul></div>
+        <div><h3>Lo que les falta</h3><ul><li>Son ruidosos y lentos: un paso α grande puede arruinar una política buena de un saque. PPO, en la próxima lección, pone un freno.</li><li>Con una política lineal no hay mucho margen: quedan cerca de Coleccionista.</li></ul></div>
+      </div>
+      <div class="elos" data-elos="lineal:sb_reinforce,lineal:sb_reinforce_baseline,lineal:sb_actor_critico,lineal:sb_actor_critico_trazas"></div>
+    </div>
+    <div class="next">
+      <a class="btn secondary" href="lab.html#actor_critic">Verlo entrenar en el Laboratorio</a>
+      <button class="btn" type="button" data-go="9">Lección 9: PPO →</button>
+    </div>`;
+  const host = $('l8practice');
+  const showAlg = v => {
+    host.innerHTML = '';
+    practice(host, PolicyAgent(v), [{ k: 'alpha', label: 'α', min: 0.005, max: 0.2, step: 0.005 }]);
+    root.querySelectorAll('[data-v]').forEach(b => b.className = `btn ${b.dataset.v === v ? '' : 'secondary'}`);
+  };
+  root.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) showAlg(b.dataset.v); });
+  showAlg('r');
+}
+
+// Una situación real para mirar con un modelo entrenado.
+function situation(k = 51) {
+  const rng = seed(k), ep = new Episode(rng), af = botOf('afinado');
+  for (let t = rng.int(6); t > 0 && !ep.done; t--) ep.step(ep.legal().indexOf(af.act(ep.g, rng)));
+  return ep.done ? situation(k + 1) : ep;
+}
+const situationHTML = ep => `${tableView(ep.g.rows)}${countsView(ep.hand(), 'Su mano')}${countsView(ep.g.cols[0], 'Su colección')}
+  <p class="stat">Rivales: ${ep.g.cols.slice(1).map((c, i) => `${NAMES[i + 1]} ${sum(c)} pájaros`).join(' · ')}.</p>`;
+
+// ===================== Lección 9: PPO =====================
+function lesson9(root) {
+  root.innerHTML = `
+    <div><div class="eyebrow">Lección 9 · Schulman y otros, 2017</div><h1>PPO: gradiente de política con freno</h1></div>
+    <p class="idea">Actor-crítico, pero con una red en vez de una fórmula lineal, muchas partidas por tanda y un freno: en cada actualización, la probabilidad de una jugada no puede cambiar más que un poquito.</p>
+    <div class="card">
+      <h2>El problema: pasos demasiado grandes</h2>
+      <p>En la lección 8, un α grande podía arruinar en una actualización una política que costó miles de partidas. PPO junta una tanda de partidas, calcula para cada jugada si salió mejor o peor de lo esperado (la <b>ventaja</b>, con GAE) y la repasa varias veces, pero <b>recorta</b> el objetivo: si la probabilidad de una jugada ya subió más de un 20% respecto de cuando se jugó, deja de empujarla.</p>
+      <div class="calc">razón    ρ = π_nueva(jugada) / π_vieja(jugada)
+objetivo = mín( ρ · A,  recorte(ρ, 0,8, 1,2) · A )</div>
+      <div class="controls"><label class="slider" for="l9r">ρ = <b id="l9rv">1,3</b><input type="range" id="l9r" min="0.5" max="1.6" step="0.05" value="1.3"></label><label class="slider" for="l9a">ventaja A = <b id="l9av">+1</b><input type="range" id="l9a" min="-1" max="1" step="2" value="1"></label></div>
+      <div class="calc" id="l9clip"></div>
+    </div>
+    <div class="card">
+      <h2>El agente PPO de CuBirds</h2>
+      <p>Una red (${E.DIM} → 64 → 64 → 1) puntúa cada acción legal a partir del estado y de la jugada; el crítico estima la probabilidad de ganar desde el estado. La misma red juega, decide si roba y elige bandadas, en mesas de 2 a 5. Se entrenó con 77.000 partidas contra bots y contra copias de sí misma, con el potencial de la lección 0. Así ve una jugada real:</p>
+      <div id="l9sit"></div>
+      <div class="controls"><button class="btn secondary" type="button" id="l9new">Otra situación</button></div>
+    </div>
+    <div class="card">
+      <h2>En pseudocódigo</h2>
+      <div class="code">repetir:
+    jugar 256 partidas con la política actual (en paralelo)
+    para cada jugada: ventaja A con GAE (λ = 0,95)
+    4 pasadas sobre la tanda:
+        ρ = π_nueva / π_vieja
+        pérdida = −mín(ρ A, recorte(ρ, 1 − ε, 1 + ε) A) + ½ (V − G)² − 0,01 · entropía
+        un paso de Adam</div>
+    </div>
+    <div class="card">
+      <h2>Lo bueno y lo que le falta</h2>
+      <div class="pros">
+        <div><h3>Lo bueno</h3><ul><li>Estable: el freno evita los desastres de un paso grande.</li><li>Aprovecha cada tanda varias veces.</li><li>Es de los mejores agentes del ranking que aprenden sólo jugando, sin buscar.</li></ul></div>
+        <div><h3>Lo que le falta</h3><ul><li>Necesita muchas partidas: decenas de miles.</li><li>No piensa en la jugada: si una situación es rara, la red puede equivocarse feo. Combinarlo con búsqueda es la lección 12.</li></ul></div>
+      </div>
+      <div class="elos" data-elos="red:ppo"></div>
+    </div>
+    <div class="next">
+      <a class="btn secondary" href="lab.html#ppo">PPO liviano en el Laboratorio</a>
+      <button class="btn" type="button" data-go="10">Lección 10: neuroevolución →</button>
+    </div>`;
+  const clip = () => {
+    const r = +$('l9r').value, A = +$('l9a').value, c = Math.min(1.2, Math.max(0.8, r)), obj = Math.min(r * A, c * A);
+    $('l9rv').textContent = fmt(r); $('l9av').textContent = A > 0 ? '+1' : '−1';
+    const frenado = (A > 0 && r > 1.2) || (A < 0 && r < 0.8);
+    $('l9clip').innerHTML = `ρ · A = ${fmt(r * A)}   recorte(ρ) · A = ${fmt(c * A)}   objetivo = mín = <b>${fmt(obj)}</b>\n${frenado ? 'El freno actúa: la jugada ya cambió bastante, así que el objetivo no sube más con ρ y no empuja más.' : 'El freno no actúa: todavía puede empujar la probabilidad en la dirección de la ventaja.'}`;
+  };
+  root.addEventListener('input', e => { if (e.target.id === 'l9r' || e.target.id === 'l9a') clip(); });
+  clip();
+  async function show() {
+    const m = await model('ppo'), ep = situation(61), legal = ep.legal(), X = E.decision(ep.g)[1];
+    const z = X.map(x => E.netLogit(m.params, x)), mx = Math.max(...z), e = z.map(v => Math.exp(v - mx)), s = sum(e), p = e.map(v => v / s);
+    const V = E.netValue(m.params, E.globalFeatures(ep.g));
+    const order = orderBy(legal.length, i => p[i]).slice(0, 6);
+    $('l9sit').innerHTML = `${situationHTML(ep)}
+      <div class="scroll"><table class="dec"><thead><tr><th>Jugada</th><th>Probabilidad</th></tr></thead><tbody>${order.map((i, k) => `<tr class="${k === 0 ? 'best' : ''}"><td>${actHTML(legal[i], ep.hand())}</td><td class="num">${fmt(p[i] * 100, 1)}%</td></tr>`).join('')}</tbody></table></div>
+      <p>El crítico estima que, desde acá, tiene <b>${fmt(Math.max(0, V) * 100, 0)}%</b> de probabilidad de ganar (más el potencial que le falta juntar). ${p[order[0]] > 0.8 ? 'La política está muy segura: casi siempre haría la primera.' : 'Duda entre varias: el sorteo reparte.'}</p>`;
+  }
+  $('l9new').addEventListener('click', show);
+  show().catch(() => { $('l9sit').innerHTML = '<p class="muted">No se pudo cargar el modelo de PPO.</p>'; });
+}
+
+// ===================== Lección 10: neuroevolución =====================
+function lesson10(root) {
+  root.innerHTML = `
+    <div><div class="eyebrow">Lección 10 · Salimans y otros, 2017 · algoritmos genéticos</div><h1>Neuroevolución: aprender sin gradientes</h1></div>
+    <p class="idea">No calcula hacia dónde mejorar: prueba. Hace variaciones al azar de la red, las pone a jugar y se queda con lo que ganó más. Como la evolución, pero con redes.</p>
+    <div class="card">
+      <h2>Dos versiones</h2>
+      <dl class="gloss">
+        <dt>Estrategia evolutiva</dt><dd>Un solo "padre". Cada generación nacen hijos con los pesos perturbados (en pares: +ruido y −ruido), todos juegan las mismas partidas y el padre se corre hacia las perturbaciones de los que ganaron más. Los hijos no sobreviven: sólo indican la dirección. Es como estimar el gradiente probando.</dd>
+        <dt>Algoritmo genético</dt><dd>Una población que evoluciona: los mejores pasan intactos (élite) y el resto son hijos de dos padres elegidos por torneo, con cruza y mutación.</dd>
+      </dl>
+    </div>
+    <div class="card">
+      <h2>Una generación, a mano</h2>
+      <p>Una política lineal chica (65 pesos) y 6 hijos. Cada hijo juega las mismas 6 partidas; el número es su índice de victorias (1 = lo justo).</p>
+      <div id="l10gen"></div>
+      <div class="controls"><button class="btn" type="button" id="l10go">Otra generación</button><button class="btn secondary" type="button" id="l10reset">Empezar de cero</button></div>
+    </div>
+    <div class="card">
+      <h2>En pseudocódigo (estrategia evolutiva)</h2>
+      <div class="code">θ = pesos del padre
+repetir:
+    ε_1..ε_n = ruido al azar
+    hijos = θ + σ ε_i   y   θ − σ ε_i
+    fitness = índice de victorias de cada hijo en las mismas partidas
+    puesto = ranking de los fitness (de −½ a +½)
+    θ = θ + α · Σ_i (puesto(+i) − puesto(−i)) · ε_i / (n σ)</div>
+    </div>
+    <div class="card">
+      <h2>Lo bueno y lo que le falta</h2>
+      <div class="pros">
+        <div><h3>Lo bueno</h3><ul><li>No necesita derivar nada: sirve con cualquier política.</li><li>Sólo mira el resultado final, así que no le importa que la recompensa llegue tarde.</li><li>Se paraleliza perfecto: cada hijo juega por su lado.</li></ul></div>
+        <div><h3>Lo que le falta</h3><ul><li>Muy ruidoso: con pocas partidas por hijo, la suerte decide quién parece mejor.</li><li>En CuBirds la red evolutiva se estancó en 150 generaciones, por debajo de PPO.</li></ul></div>
+      </div>
+      <div class="elos" data-elos="red:evolutiva"></div>
+    </div>
+    <div class="next">
+      <a class="btn secondary" href="lab.html#es">Verla evolucionar en el Laboratorio</a>
+      <button class="btn" type="button" data-go="11">Lección 11: búsqueda →</button>
+    </div>`;
+  const rng = seed(43), sigma = 0.3, alpha = 0.3;
+  const gauss = () => { let u = 0, v = 0; while (!u) u = rng(); while (!v) v = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  let th = new Array(E.DIM).fill(0), gen = 0;
+  const chooser = w => ep => argmax(ep.feats().map(x => dot(x, w)));
+  function fitness(w, seeds) { let t = 0; for (const s of seeds) { const ep = new Episode(E.makeRng(s)); while (!ep.done) ep.step(chooser(w)(ep)); if (ep.g.winners.includes(0)) t += ep.n / ep.g.winners.length; } return t / seeds.length; }
+  function generation() {
+    gen++;
+    const seeds = Array.from({ length: 6 }, () => rng.int(2 ** 30) + 1), eps = Array.from({ length: 3 }, () => th.map(gauss));
+    const kids = [...eps.map(e => th.map((x, i) => x + sigma * e[i])), ...eps.map(e => th.map((x, i) => x - sigma * e[i]))];
+    const fit = kids.map(k => fitness(k, seeds)), rank = new Array(6);
+    fit.map((f, i) => [f, i]).sort((a, b) => a[0] - b[0]).forEach(([, i], r) => rank[i] = r / 5 - 0.5);
+    th = th.map((x, i) => x + alpha * eps.reduce((s, e, p) => s + (rank[p] - rank[p + 3]) * e[i], 0) / (3 * sigma));
+    const parent = fitness(th, seeds);
+    $('l10gen').innerHTML = `<div class="scroll"><table class="dec"><thead><tr><th>Hijo</th><th>Ruido</th><th>Índice</th><th>Puesto</th></tr></thead><tbody>${fit.map((f, i) => `<tr><td>#${i + 1}</td><td>${i < 3 ? '+' : '−'}ε${(i % 3) + 1}</td><td class="num">${fmt(f)}</td><td class="num">${fmt(rank[i], 2)}</td></tr>`).join('')}</tbody></table></div>
+      <p>Generación <b>${gen}</b>. El padre se movió hacia los ruidos de los hijos con mejor puesto; jugando las mismas partidas, ahora hace <b>${fmt(parent)}</b>. Con tan pocas partidas el número salta mucho: por eso hacen falta cientos de generaciones.</p>
+      <p class="muted">Los pesos que más pesan en el padre:</p>${weightBars(th, 6, true)}`;
+  }
+  $('l10go').addEventListener('click', () => { $('l10gen').innerHTML = '<p class="muted">Jugando…</p>'; setTimeout(generation, 20); });
+  $('l10reset').addEventListener('click', () => { th = new Array(E.DIM).fill(0); gen = 0; setTimeout(generation, 20); });
+  setTimeout(generation, 50);
+}
+
+// ===================== Lección 11: búsqueda =====================
+// Una simulación de una vuelta de mesa con todos jugando como Afinado, narrada.
+function narrateRollout(sim, me, a, rng) {
+  const from = sim.log.length;
+  sim.step(a);
+  const stop = sim.turn + sim.n;
+  while (!sim.done && sim.turn < stop) sim.step(botOf('afinado').act(sim, rng));
+  let opp = -Infinity;
+  for (let q = 0; q < sim.n; q++) if (q !== me) opp = Math.max(opp, E.evaluate(sim, q));
+  return { events: sim.log.slice(from), mine: E.evaluate(sim, me), opp, v: (E.evaluate(sim, me) - E.EXPERTO_W.opp * opp) / E.EXPERTO_W.win };
+}
+function rootSearch(g, iterations, rng, checkpoints) {
+  const me = g.cur, cands = E.ranked(g, g.legalActions(), E.AFINADO).slice(0, 8);
+  const n = new Array(cands.length).fill(0), w = new Array(cands.length).fill(0), snaps = [];
+  for (let it = 1; it <= iterations; it++) {
+    let j = n.indexOf(0);
+    if (j < 0) { let bu = -Infinity; n.forEach((ni, i) => { const u = w[i] / ni + 0.7 * Math.sqrt(Math.log(it) / ni); if (u > bu) { bu = u; j = i; } }); }
+    w[j] += narrateRollout(E.determinize(g, me, rng), me, cands[j], rng).v; n[j]++;
+    if (checkpoints.includes(it)) snaps.push({ it, rows: cands.map((a, i) => [a, n[i], n[i] ? w[i] / n[i] : null]) });
+  }
+  return { best: cands[argmax(n)], snaps };
+}
+function lesson11(root) {
+  root.innerHTML = `
+    <div><div class="eyebrow">Lección 11 · Sutton y Barto, cap. 8.10 y 8.11</div><h1>Búsqueda: pensar en vez de aprender</h1></div>
+    <p class="idea">No aprende nada entre partidas. En cada jugada imagina muchas veces cómo podría seguir la partida, con las cartas que no ve repartidas entre los rivales, y hace la jugada que mejor resultado dio en su imaginación.</p>
+    <div class="card">
+      <h2>Planificar en el momento</h2>
+      <p>Dyna-Q (lección 6) usaba un modelo para aprender. Acá el modelo se usa para <b>decidir</b>: antes de cada jugada, el agente simula el futuro. Tenemos un modelo perfecto, el propio juego; lo que no conoce son las cartas ocultas.</p>
+      <dl class="gloss">
+        <dt>Determinización</dt><dd>Junta las cartas que no ve (las manos rivales, el mazo y el descarte) y en cada simulación las reparte al azar, respetando cuántas tiene cada uno.</dd>
+        <dt>Modelo de rivales</dt><dd>En la simulación todos juegan como Afinado durante una vuelta de mesa. Después evalúa cómo quedó: bandadas que le faltan, valor de su mano y pájaros, menos el mejor rival.</dd>
+        <dt>Experto (rollouts planos)</dt><dd>Toma las 6 mejores jugadas según Afinado y le da 8 simulaciones a cada una.</dd>
+        <dt>ISMCTS</dt><dd>Usa UCB (lección 2) para mandar más simulaciones a las jugadas que vienen saliendo bien, y arma un árbol con sus jugadas siguientes.</dd>
+      </dl>
+    </div>
+    <div class="card">
+      <h2>Una jugada pensada paso a paso</h2>
+      <div id="l11"></div>
+      <div class="controls"><button class="btn secondary" type="button" id="l11new">Otra situación</button></div>
+    </div>
+    <div class="card">
+      <h2>En pseudocódigo (ISMCTS de una jugada)</h2>
+      <div class="code">candidatas = las 8 mejores jugadas según Afinado
+repetir N veces:
+    repartir las cartas ocultas al azar (determinización)
+    a = la candidata sin probar, o argmax  valor(a) + c·√(ln N / N(a))   # UCB
+    jugar a y una vuelta de mesa con todos como Afinado
+    sumar la evaluación a la candidata a
+jugar la candidata con más simulaciones</div>
+    </div>
+    <div class="card">
+      <h2>Lo bueno y lo que le falta</h2>
+      <div class="pros">
+        <div><h3>Lo bueno</h3><ul><li>No necesita entrenamiento: anda desde la primera partida.</li><li>Se adapta a cualquier situación, aunque sea rara.</li><li>Más tiempo para pensar es más fuerza: el ISMCTS queda entre los primeros del ranking.</li></ul></div>
+        <div><h3>Lo que le falta</h3><ul><li>Es lento: cientos de simulaciones por jugada.</li><li>Depende de su evaluación y de su modelo de rivales: el Experto, con la misma idea pero sin UCB, apenas le gana a Afinado.</li><li>No aprende: comete el mismo error cada vez.</li></ul></div>
+      </div>
+      <div class="elos" data-elos="ismcts,experto,afinado"></div>
+    </div>
+    <div class="next">
+      <a class="btn secondary" href="lab.html#ismcts">Verlo pensar en el Laboratorio</a>
+      <button class="btn" type="button" data-go="12">Lección 12: AlphaZero →</button>
+    </div>`;
+  function show() {
+    const ep = situation(71), g = ep.g, rng = seed(73), hand = ep.hand();
+    const hidden = g.deck.length + g.discard.length + sum(g.hands.slice(1).map(sum));
+    const sim = E.determinize(g, 0, rng);
+    const cands = E.ranked(g, g.legalActions(), E.AFINADO);
+    const ro = narrateRollout(E.determinize(g, 0, rng), 0, cands[0], rng);
+    const { best, snaps } = rootSearch(g, 120, rng, [10, 40, 120]);
+    const snapTable = sn => `<div class="scroll"><table class="dec"><thead><tr><th>Jugada</th><th>Sim.</th><th>Valor</th></tr></thead><tbody>${sn.rows.slice().sort((a, b) => b[1] - a[1]).slice(0, 5).map(([a, n, m]) => `<tr><td>${actHTML(a, hand)}</td><td class="num">${n}</td><td class="num">${m == null ? '—' : fmt(m, 3)}</td></tr>`).join('')}</tbody></table></div>`;
+    $('l11').innerHTML = `
+      <div class="step"><h3><em>1</em> Mira la mesa, su mano y las colecciones <span class="tag">piensa</span></h3>${situationHTML(ep)}</div>
+      <div class="step"><h3><em>2</em> Cuenta las cartas que no ve <span class="tag">piensa</span></h3><p>Hay <b>${hidden}</b> cartas ocultas: las manos de los rivales (${g.hands.slice(1).map(sum).join(', ')} cartas), el mazo (${g.deck.length}) y el descarte (${g.discard.length}).</p></div>
+      <div class="step"><h3><em>3</em> Imagina qué tienen los rivales (una determinización) <span class="tag">piensa</span></h3>
+        ${sim.hands.slice(1).map((h, i) => countsView(h, `${NAMES[i + 1]} (imaginado)`)).join('')}</div>
+      <div class="step"><h3><em>4</em> Simula una vuelta de mesa <span class="tag">piensa</span></h3><p>Prueba ${actHTML(cands[0], hand)} y deja que todos jueguen como Afinado hasta que le vuelva a tocar:</p>
+        ${eventsList({ events: ro.events })}
+        <div class="calc">evaluación = suya − ${fmt(E.EXPERTO_W.opp)} × mejor rival = ${fmt(ro.mine, 2)} − ${fmt(E.EXPERTO_W.opp)} × ${fmt(ro.opp, 2)} → valor <b>${fmt(ro.v, 3)}</b></div>
+        <p>Es un solo futuro posible: hace falta repetirlo muchas veces, con manos imaginadas distintas.</p></div>
+      <div class="step"><h3><em>5</em> Repite y reparte con UCB <span class="tag">piensa</span></h3><p>Así quedó el reparto entre las 8 candidatas a las 10, 40 y 120 simulaciones:</p>
+        <div class="pros" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">${snaps.map(sn => `<div><h3>${sn.it} simulaciones</h3>${snapTable(sn)}</div>`).join('')}</div></div>
+      <div class="step cur"><h3><em>6</em> Elige <span class="tag">piensa</span></h3><p>Hace la más simulada: ${actHTML(best, hand)}. ${best === cands[0] ? 'Coincide con la favorita de Afinado.' : 'No es la favorita de Afinado: la búsqueda encontró algo mejor (o tuvo suerte con las manos imaginadas).'}</p></div>
+      <div class="step"><h3><em>7</em> ¿Y el aprendizaje? <span class="tag">aprende</span></h3><p>No hay. En la jugada siguiente empieza de cero.</p></div>`;
+  }
+  $('l11new').addEventListener('click', () => { $('l11').innerHTML = '<p class="muted">Pensando…</p>'; setTimeout(show, 20); });
+  setTimeout(show, 20);
+}
+
+// ===================== Lección 12: AlphaZero =====================
+function lesson12(root) {
+  root.innerHTML = `
+    <div><div class="eyebrow">Lección 12 · Anthony y otros, 2017 · Silver y otros, 2017</div><h1>Expert Iteration y AlphaZero: pensar y aprender juntos</h1></div>
+    <p class="idea">Una red aprende a jugar imitando a una búsqueda, y la búsqueda piensa mejor usando a la red. Cada una mejora a la otra, vuelta tras vuelta.</p>
+    <div class="card">
+      <h2>Juntar las dos mitades</h2>
+      <p>La búsqueda (lección 11) piensa bien pero no aprende, y su evaluación es fija. Las redes (lecciones 7 a 9) aprenden pero no piensan en la jugada. <b>Expert Iteration</b> las combina: la búsqueda (el experto) juega y anota cómo repartió sus simulaciones; la red (el aprendiz) aprende a predecir ese reparto; y en la vuelta siguiente el experto usa al aprendiz. <b>AlphaZero</b> es la versión más conocida: la red da las dos cosas que la búsqueda necesitaba de afuera.</p>
+      <dl class="gloss">
+        <dt>Política (priors)</dt><dd>Qué jugadas parecen buenas: la búsqueda prueba primero esas (PUCT, una variante de UCB que reparte según la red).</dd>
+        <dt>Valor</dt><dd>Qué tan bien está cada jugador: al llegar a una posición nueva, la red la evalúa en vez de simular con Afinado.</dd>
+        <dt>Autojuego</dt><dd>Todos los asientos buscan con la misma red. La política aprende las visitas de la búsqueda; el valor, quién ganó.</dd>
+      </dl>
+    </div>
+    <div class="card">
+      <h2>Lo que hubo que adaptar a CuBirds</h2>
+      <dl class="gloss">
+        <dt>Cartas ocultas</dt><dd>En cada simulación se reparten manos posibles (como en ISMCTS), y cada nodo cuenta cuántas veces estuvo disponible cada jugada.</dd>
+        <dt>Varios jugadores</dt><dd>Cada nodo guarda la probabilidad de ganar de <b>cada</b> jugador; el que juega elige según la suya (max^n).</dd>
+        <dt>Arranque</dt><dd>No empieza de cero: parte de la red de PPO y hace 8 vueltas de 600 partidas de autojuego con 48 simulaciones por decisión.</dd>
+      </dl>
+    </div>
+    <div class="card">
+      <h2>Una decisión, por dentro</h2>
+      <p>La red de AlphaZero en una situación real. Primero, lo que diría la red sola; después, cómo la búsqueda va repartiendo simulaciones.</p>
+      <div id="l12"></div>
+      <div class="controls"><button class="btn secondary" type="button" id="l12new">Otra situación</button></div>
+    </div>
+    <div class="card">
+      <h2>En pseudocódigo</h2>
+      <div class="code">búsqueda (en cada decisión, N simulaciones):
+    repartir las cartas ocultas al azar
+    bajar por el árbol: en cada nodo, el que juega elige
+        argmax  Q_jugador(a) + c · prior(a) · √(disponible(a)) / (1 + N(a))
+    en un nodo nuevo: priors y valores de todos con la red
+    sumar los valores de cada jugador en el camino
+    jugar la más visitada
+
+entrenamiento (cada vuelta):
+    600 partidas de autojuego → (estado, visitas, quién ganó)
+    política ← entropía cruzada con las visitas
+    valor    ← error cuadrático con el resultado</div>
+    </div>
+    <div class="card">
+      <h2>Cómo le fue</h2>
+      <p>Con búsqueda, AlphaZero es el primero del ranking de CuBirds, unos 50 puntos de Elo arriba de PPO y LSTD. La red sola, sin buscar, juega un poco peor que PPO: aprendió a imitar visitas de una búsqueda corta y con ruido, que es una política más "repartida". Lo que se gana es que <b>red y búsqueda juntas</b> juegan mejor que cualquiera de las dos por separado.</p>
+      <p class="muted">En Toma 6 pasó al revés: la red entrenada así mejoró (es la primera de aquel ranking), pero su búsqueda no suma, porque allá la red de valor casi no aprende (cada ronda tiene muchísima varianza).</p>
+      <div class="elos" data-elos="az:alphazero:48,red:alphazero,red:ppo,ismcts"></div>
+    </div>
+    <div class="next">
+      <a class="btn secondary" href="arena.html">Ver el ranking completo</a>
+      <a class="btn" href="./">Jugar contra AlphaZero</a>
+    </div>`;
+  async function show() {
+    const m = await model('alphazero'), ep = situation(81), g = ep.g, legal = g.legalActions(), hand = ep.hand();
+    const net = E.prepNet(m), [, prior] = E.priors(net, g), vals = E.netValues(net, g);
+    const rng = seed(83), budgets = [8, 48, 120];
+    const runs = budgets.map(it => ({ it, s: E.azSearch(m, g, it, rng) }));
+    const order = orderBy(legal.length, i => prior[i]).slice(0, 6);
+    const last = runs[runs.length - 1].s;
+    for (const i of orderBy(legal.length, i => last.visits[i]).slice(0, 3)) if (!order.includes(i)) order.push(i);
+    $('l12').innerHTML = `${situationHTML(ep)}
+      <p>La red estima la probabilidad de ganar de cada uno: ${vals.map((v, p) => `${NAMES[p]} <b>${fmt(v * 100, 0)}%</b>`).join(' · ')}.</p>
+      <div class="scroll"><table class="dec"><thead><tr><th>Jugada</th><th>Red</th>${budgets.map(b => `<th>${b} sim.</th>`).join('')}</tr></thead><tbody>
+      ${order.map(i => `<tr class="${last.visits[i] === Math.max(...last.visits) ? 'best' : ''}"><td>${actHTML(legal[i], hand)}</td><td class="num">${fmt(prior[i] * 100, 1)}%</td>${runs.map(r => `<td class="num">${r.s.visits[i]}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+      <p>Con pocas simulaciones la búsqueda sigue casi al pie de la letra a la red. Con más, las jugadas que en las manos imaginadas salen mejor de lo que la red esperaba juntan visitas, y a veces la favorita cambia. Esas visitas son lo que la red aprende a imitar en la vuelta siguiente: <b>la búsqueda le enseña a la red</b>.</p>`;
+  }
+  $('l12new').addEventListener('click', () => { $('l12').innerHTML = '<p class="muted">Pensando…</p>'; setTimeout(() => show().catch(() => {}), 20); });
+  $('l12').innerHTML = '<p class="muted">Cargando la red…</p>';
+  show().catch(() => { $('l12').innerHTML = '<p class="muted">No se pudo cargar el modelo de AlphaZero.</p>'; });
+}
+
+// ===================== índice =====================
+const LESSONS = [
+  { n: 0, title: 'Qué es aprender por refuerzo', sub: 'agente, recompensa, potencial, explorar o aprovechar', run: lesson0 },
+  { n: 1, title: 'El bandido ε-greedy', sub: 'aprender promediando y explorar al azar', run: lesson1 },
+  { n: 2, title: 'UCB y el bandido por gradiente', sub: 'explorar con criterio', run: lesson2 },
+  { n: 3, title: 'Monte Carlo', sub: 'aprender de la partida entera', run: lesson3 },
+  { n: 4, title: 'SARSA y Q-learning', sub: 'aprender jugada a jugada (TD)', run: lesson4 },
+  { n: 5, title: 'n pasos y trazas', sub: 'el punto medio entre Monte Carlo y TD', run: lesson5 },
+  { n: 6, title: 'Dyna-Q', sub: 'planificar con un modelo aprendido', run: lesson6 },
+  { n: 7, title: 'Aproximación de funciones', sub: 'de tablas a pesos y redes', run: lesson7 },
+  { n: 8, title: 'REINFORCE y actor-crítico', sub: 'aprender la política directamente', run: lesson8 },
+  { n: 9, title: 'PPO', sub: 'gradiente de política con freno', run: lesson9 },
+  { n: 10, title: 'Neuroevolución', sub: 'estrategias evolutivas y algoritmo genético', run: lesson10 },
+  { n: 11, title: 'Búsqueda: rollouts e ISMCTS', sub: 'pensar sin aprender', run: lesson11 },
+  { n: 12, title: 'Expert Iteration y AlphaZero', sub: 'pensar y aprender juntos', run: lesson12 },
+];
+let current = -1;
+function renderToc() {
+  $('toc').innerHTML = LESSONS.map(l => `<button type="button" data-go="${l.n}" aria-current="${l.n === current}">
+    <span class="n">${l.n}</span><b>${esc(l.title)}</b><small>${esc(l.sub)}</small></button>`).join('');
+}
+function go(n) {
+  const l = LESSONS.find(x => x.n === n) || LESSONS[0];
+  current = l.n; store('cubirds-aprender-leccion', current); renderToc();
+  const cur = $('toc').querySelector('[aria-current="true"]');
+  if (cur) cur.scrollIntoView({ block: 'nearest', inline: 'start' });
+  const art = $('lesson'), fresh = art.cloneNode(false);
+  art.replaceWith(fresh); // sin los listeners de la lección anterior
+  l.run(fresh);
+  fillElo();
+  if (location.hash !== `#leccion-${l.n}`) history.replaceState(null, '', `#leccion-${l.n}`);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-go]');
+  if (b) { go(+b.dataset.go); $('lesson').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+});
+const fromHash = /leccion-(\d+)/.exec(location.hash);
+go(fromHash ? +fromHash[1] : load('cubirds-aprender-leccion', 0));
+})();
+</script>
