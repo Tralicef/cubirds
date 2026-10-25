@@ -26,8 +26,12 @@ def main():
     shutil.copy(a.src, MODELS / file)
     idx_path = MODELS / "index.json"
     idx = json.loads(idx_path.read_text()) if idx_path.exists() else []
+    prev = next((m for m in idx if m["id"] == a.id), {})
     idx = [m for m in idx if m["id"] != a.id]
-    idx.append({"id": a.id, "file": file, "kind": kind, "label": a.label, "family": a.family, "desc": a.desc})
+    entry = {"id": a.id, "file": file, "kind": kind, "label": a.label, "family": a.family, "desc": a.desc}
+    if prev.get("variants"):
+        entry["variants"] = prev["variants"]  # p. ej. el mismo modelo con búsqueda (az:<id>:48)
+    idx.append(entry)
     idx_path.write_text(json.dumps(idx, ensure_ascii=False, indent=1))
     print(f"{kind}:{a.id} → {MODELS / file}")
 

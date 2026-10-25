@@ -160,6 +160,11 @@ code { font-size: 12.5px; background: var(--bg); padding: 1px 5px; border-radius
 }
 .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .chip[aria-pressed="true"]::before { content: "✓"; font-size: 12px; }
+.pickbar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.grouphead { display: flex; align-items: baseline; gap: 10px; }
+.linkbtn { border: 0; background: transparent; padding: 0; font-weight: 800; font-size: 12.5px; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.pickbar .chip { font-weight: 800; }
+.pickcount { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 460px) { .row2 { grid-template-columns: 1fr; } }
 .seg { display: flex; background: var(--bg); border-radius: 10px; padding: 3px; gap: 3px; }
@@ -602,6 +607,7 @@ async function loadModels() {
     const idx = await fetch('arena/models/index.json').then(r => { if (!r.ok) throw 0; return r.json(); });
     for (const m of idx) {
       catalog.push({ spec: `${m.kind}:${m.id}`, label: m.label, family: m.family || 'rl', desc: m.desc });
+      for (const v of m.variants || []) catalog.push({ family: m.family || 'rl', ...v });
       models[m.id] = { file: m.file, data: null, meta: { label: m.label, family: m.family || 'rl', desc: m.desc } };
     }
   } catch { /* sin modelos: solo bots */ }
@@ -613,9 +619,16 @@ function renderSimForm() {
   $('agentGroups').innerHTML = groups.map(([fam, title]) => {
     const items = catalog.filter(a => a.family === fam);
     if (!items.length) return '';
-    return `<div class="group"><span class="eyebrow">${title}</span><div class="chips">${items.map(a =>
+    const allIn = items.every(a => prefs.picked.includes(a.spec));
+    return `<div class="group"><div class="grouphead"><span class="eyebrow">${title}</span><button type="button" class="linkbtn" data-pick-fam="${fam}">${allIn ? 'quitar todos' : 'elegir todos'}</button></div><div class="chips">${items.map(a =>
       `<button type="button" class="chip" data-spec="${esc(a.spec)}" aria-pressed="${prefs.picked.includes(a.spec)}" title="${esc(a.desc)}">${esc(a.label)}</button>`).join('')}</div></div>`;
   }).join('');
+  // elegir todos de una, para verlos competir a todos a la vez
+  $('agentGroups').insertAdjacentHTML('afterbegin', `<div class="pickbar">
+    <button type="button" class="chip" data-pick="all" aria-pressed="false">Elegir todos (${catalog.length})</button>
+    <button type="button" class="chip" data-pick="none" aria-pressed="false">Ninguno</button>
+    <span class="pickcount" id="pickCount"></span></div>`);
+  updatePickCount();
   $('gamesSeg').innerHTML = GAMES.map(g => `<button type="button" data-g="${g}" aria-pressed="${prefs.games === g}">${g}</button>`).join('');
   $('tblSeg').innerHTML = TABLES.map(t => `<button type="button" data-t="${t}" aria-pressed="${String(prefs.table) === String(t)}">${t === 'variada' ? '2 a 5' : t}</button>`).join('');
   $('repSeg').innerHTML = REPS.map(g => `<button type="button" data-rep="${g}" aria-pressed="${prefs.reps === g}">${g}</button>`).join('');
@@ -644,11 +657,28 @@ function syncTable() {
   $('runBtn').disabled = n < 2 || running;
   store('cubirds-arena-sim', prefs);
 }
+const SLOW_SPEC = /^(experto|ismcts|az:)/;
+function updatePickCount() {
+  const el = $('pickCount'); if (!el) return;
+  const slow = catalog.filter(a => prefs.picked.includes(a.spec) && SLOW_SPEC.test(a.spec)).length;
+  el.textContent = `${prefs.picked.length} elegidos${slow ? ` · ${slow} de búsqueda (los más lentos)` : ''}`;
+}
 $('agentGroups').addEventListener('click', e => {
+  const all = e.target.closest('[data-pick]');
+  if (all) { prefs.picked = all.dataset.pick === 'all' ? catalog.map(a => a.spec) : []; renderSimForm(); syncTable(); return; }
+  const fam = e.target.closest('[data-pick-fam]');
+  if (fam) {
+    const specs = catalog.filter(a => a.family === fam.dataset.pickFam).map(a => a.spec);
+    prefs.picked = specs.every(x => prefs.picked.includes(x)) ? prefs.picked.filter(x => !specs.includes(x)) : prefs.picked.concat(specs.filter(x => !prefs.picked.includes(x)));
+    renderSimForm(); syncTable(); return;
+  }
   const b = e.target.closest('[data-spec]'); if (!b) return;
   const s = b.dataset.spec;
   prefs.picked = prefs.picked.includes(s) ? prefs.picked.filter(x => x !== s) : prefs.picked.concat(s);
   b.setAttribute('aria-pressed', String(prefs.picked.includes(s)));
+  const grp = b.closest('.group'), head = grp && grp.querySelector('[data-pick-fam]');
+  if (head) head.textContent = [...grp.querySelectorAll('[data-spec]')].every(x => x.getAttribute('aria-pressed') === 'true') ? 'quitar todos' : 'elegir todos';
+  updatePickCount();
   syncTable();
 });
 $('gamesSeg').addEventListener('click', e => {

@@ -264,6 +264,13 @@
   "kind": "red",
   "label": "AlphaZero",
   "family": "rl",
-  "desc": "Red por jugada entrenada estilo AlphaZero: imita las visitas de una búsqueda PUCT que reparte manos posibles en cada simulación y valúa las hojas con la misma red (6 iteraciones de autojuego, 3.600 partidas, arrancando de PPO)."
+  "desc": "Red por jugada entrenada estilo AlphaZero: imita las visitas de una búsqueda PUCT que reparte manos posibles en cada simulación y valúa las hojas con la misma red (6 iteraciones de autojuego, 3.600 partidas, arrancando de PPO).",
+  "variants": [
+   {
+    "spec": "az:alphazero:48",
+    "label": "AlphaZero + búsqueda (48)",
+    "desc": "Búsqueda estilo AlphaZero con 48 simulaciones por decisión: la red da los priors y valúa las hojas; las manos ajenas se reparten al azar en cada simulación."
+   }
+  ]
  }
 ]
