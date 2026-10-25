@@ -324,7 +324,7 @@ function Stepper(el, A) {
       <div class="stepbar" aria-hidden="true">${Array.from({ length: T }, (_, i) => `<span class="${i < step ? 'on' : ''}"></span>`).join('')}</div>
       <div class="step ${step === 1 ? 'cur' : ''}"><h3><em>1</em> Mira la mesa, su mano y las colecciones <span class="tag">piensa</span></h3>
         ${tableView(p.rows)}${countsView(p.hand, 'Su mano')}${countsView(p.col, 'Su colección')}
-        <p class="stat">Rivales: ${p.others.map((c, i) => `${NAMES[i + 1]} ${sum(c)} pájaros`).join(' · ')}. Tiene <b>${p.legal.length}</b> jugadas posibles (cada especie de su mano, en cada punta de cada fila).</p></div>
+        <p class="stat">Rivales: ${p.others.map((c, i) => `${NAMES[i + 1]} ${sum(c)} pájaro${sum(c) === 1 ? '' : 's'}`).join(' · ')}. Tiene <b>${p.legal.length}</b> jugadas posibles (cada especie de su mano, en cada punta de cada fila).</p></div>
       ${show(2) ? `<div class="step ${step === 2 ? 'cur' : ''}"><h3><em>2</em> Describe la situación de cada jugada <span class="tag">piensa</span></h3>
         <p>No le importan las cartas exactas, sino cómo quedaría: cuántos pájaros se lleva, qué bandada podría formar después, cuánto mejora su mano. Eso es lo que puede comparar con lo que vivió antes.</p></div>` : ''}
       ${show(3) ? `<div class="step ${step === 3 ? 'cur' : ''}"><h3><em>3</em> ${A.lookupTitle} <span class="tag">piensa</span></h3><p>${A.lookupText}</p></div>` : ''}
@@ -1449,7 +1449,7 @@ function situation(k = 51) {
   return ep.done ? situation(k + 1) : ep;
 }
 const situationHTML = ep => `${tableView(ep.g.rows)}${countsView(ep.hand(), 'Su mano')}${countsView(ep.g.cols[0], 'Su colección')}
-  <p class="stat">Rivales: ${ep.g.cols.slice(1).map((c, i) => `${NAMES[i + 1]} ${sum(c)} pájaros`).join(' · ')}.</p>`;
+  <p class="stat">Rivales: ${ep.g.cols.slice(1).map((c, i) => `${NAMES[i + 1]} ${sum(c)} pájaro${sum(c) === 1 ? '' : 's'}`).join(' · ')}.</p>`;
 
 // ===================== Lección 10: PPO =====================
 function lesson9(root) {
