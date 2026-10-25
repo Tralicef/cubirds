@@ -601,7 +601,7 @@ r  = Φ después − Φ antes        (y al terminar: 1 si ganó, menos el Φ que
       <p><b>Aprender</b> es cambiar lo que el agente sabe a partir de lo que le pasó: ajustar un promedio, una tabla, los pesos de una red. <b>Pensar</b> es usar lo que sabe para decidir ahora, a veces imaginando el futuro.</p>
       <p>Los primeros algoritmos del recorrido casi no piensan: buscan en su tabla y listo. El ISMCTS es lo contrario: no aprende nada entre partidas, pero piensa muchísimo en cada jugada. AlphaZero, al final, hace las dos cosas.</p>
     </div>
-    <div class="next"><button class="btn" type="button" data-go="1">Lección 1: el bandido ε-greedy →</button></div>`;
+    <div class="next"><button class="btn" type="button" data-go="1">Lección 1: bots escritos a mano →</button></div>`;
   function show() {
     const rng = seed(3), ep = new Episode(rng), af = botOf('afinado');
     for (let t = rng.int(5); t > 0 && !ep.done; t--) ep.step(ep.legal().indexOf(af.act(ep.g, rng)));
@@ -619,11 +619,103 @@ r  = Φ después − Φ antes        (y al terminar: 1 si ganó, menos el Φ que
   show();
 }
 
-// ===================== Lección 1: bandido ε-greedy =====================
+// ===================== Lección 1: bots escritos a mano =====================
+function lessonBots(root) {
+  const W = [['big', 'bandada grande completa en la mano'], ['small_base', 'bandada chica justa'], ['slope', 'extra de chica a grande'], ['below', 'menos que una chica'],
+    ['w_new', 'especie que no tiene'], ['w_part', 'especie empezada (1 o 2)'], ['w_done', 'especie con 3 o más'], ['draw', 'jugar sin llevarse nada (y poder robar 2)'], ['take', 'cada pájaro que se lleva']];
+  root.innerHTML = `
+    <div><div class="eyebrow">Lección 1 · antes de aprender</div><h1>Bots escritos a mano</h1></div>
+    <p class="idea">Antes de que un algoritmo aprenda nada, alguien puede escribir las reglas a mano. Son la vara contra la que se mide todo lo demás. Y uno de ellos, Afinado, ya esconde una forma simple de aprender: probar pesos al azar y quedarse con los que más ganan.</p>
+    <div class="card">
+      <h2>Los cuatro bots</h2>
+      <dl class="gloss">
+        <dt>Azar</dt><dd>Elige cualquier jugada legal. Sirve para saber cuánto se gana sin pensar nada.</dd>
+        <dt>Goloso</dt><dd>Juega donde se lleva más pájaros; si empata, juega menos cartas. Forma siempre la bandada más grande que pueda.</dd>
+        <dt>Coleccionista</dt><dd>Le pone un <b>valor a su mano</b>: por cada especie, qué tan cerca está de una bandada chica o grande, multiplicado por cuánto le sirve esa especie a su colección. Juega lo que más sube ese valor.</dd>
+        <dt>Afinado</dt><dd>El mismo Coleccionista, con otros pesos: los que encontró una búsqueda al azar. Es el rival de entrenamiento más fuerte, y en todo el curso los agentes roban y forman bandadas como él.</dd>
+      </dl>
+      <div class="calc">valor(mano) = Σ_especies  base(cartas que tiene) × peso(lo que ya colecciona)
+puntaje(jugada) = valor(mano después) − valor(mano antes) + take · pájaros que se lleva   (o + draw si no se lleva ninguno)</div>
+    </div>
+    <div class="card">
+      <h2>Una jugada, vista por cada bot</h2>
+      <p>En una situación real, cuántos pájaros se lleva cada jugada (lo único que mira el Goloso) y el puntaje que le dan el Coleccionista y el Afinado.</p>
+      <div id="lb"></div>
+      <div class="controls"><button class="btn secondary" type="button" id="lbnew">Otra situación</button></div>
+    </div>
+    <div class="card">
+      <h2>Los pesos</h2>
+      <p>Los del Coleccionista los elegimos a ojo. Los del Afinado salieron de probar 150 combinaciones al azar, jugando contra el Coleccionista y el Goloso en mesas de 3, y quedarse con la que más ganó.</p>
+      <div class="scroll"><table class="dec"><thead><tr><th>Peso</th><th>Qué valora</th><th>Coleccionista</th><th>Afinado</th></tr></thead><tbody>
+        ${W.map(([k, d]) => `<tr><td><code>${k}</code></td><td>${d}</td><td class="num">${fmt(E.DEFAULT[k], 3)}</td><td class="num"><b>${fmt(E.AFINADO[k], 3)}</b></td></tr>`).join('')}</tbody></table></div>
+      <p>Lo que descubrió la búsqueda: una especie <b>empezada</b> vale más del triple que una nueva (3,28 contra 0,95). O sea, conviene ir por "2 especies con 3 pájaros" antes que juntar 7 especies distintas. También valora más jugar sin llevarse nada para robar 2 cartas. Nadie se lo dijo: lo encontró probando.</p>
+    </div>
+    <div class="card">
+      <h2>Probalo: una búsqueda aleatoria en vivo</h2>
+      <p>Cada combinación toma los pesos del Coleccionista y multiplica cada uno por un número al azar entre 0,4 y 2,5. Juega 60 partidas en mesas de 3 contra el Coleccionista y el Goloso, siempre con las mismas cartas, rotando el asiento. Lo justo en una mesa de 3 es ganar el 33%.</p>
+      <div class="controls"><button class="btn" type="button" id="lbsearch">Probar 12 combinaciones</button></div>
+      <div id="lbres"></div>
+    </div>
+    <div class="card">
+      <h2>¿Esto es aprender?</h2>
+      <p>Sí, pero <b>de caja negra</b>: la búsqueda no mira ninguna jugada, sólo cuántas partidas ganó cada combinación de pesos. Es la misma idea que la neuroevolución (lección 11), con 9 pesos en vez de los miles de una red. Tiene dos trampas que se ven en vivo: con pocas partidas la ganadora puede ser pura suerte (hay que volver a medirla), y sólo ajusta pesos de una fórmula que alguien escribió: nunca va a descubrir una idea que la fórmula no tenga.</p>
+      <p>El resto del curso hace lo contrario: aprende <b>jugada por jugada</b>, de lo que pasó después de cada una.</p>
+      <div class="elos" data-elos="afinado,coleccionista,goloso,azar"></div>
+    </div>
+    <div class="next"><button class="btn" type="button" data-go="2">Lección 2: el bandido ε-greedy →</button></div>`;
+  function show() {
+    const ep = situation(5), g = ep.g, legal = ep.legal(), hand = ep.hand();
+    const take = legal.map(a => { const [s, r, side] = E.decodePlay(a); return E.enclosed(g.rows[r], s, side); });
+    const col = E.coleccionistaScores(g, legal, E.DEFAULT), af = E.coleccionistaScores(g, legal, E.AFINADO);
+    const gol = argmax(legal, (a, i) => take[i] * 100 - hand[E.decodePlay(a)[0]]), ci = argmax(col), ai = argmax(af);
+    const rows = orderBy(legal.length, i => af[i]).slice(0, 6);
+    for (const i of [gol, ci]) if (!rows.includes(i)) rows.push(i);
+    const who = i => [i === gol ? 'Goloso' : '', i === ci ? 'Coleccionista' : '', i === ai ? 'Afinado' : ''].filter(Boolean).join(', ');
+    $('lb').innerHTML = `${situationHTML(ep)}
+      <div class="scroll"><table class="dec"><thead><tr><th>Jugada</th><th>Se lleva</th><th>Coleccionista</th><th>Afinado</th><th>La elige</th></tr></thead><tbody>
+      ${rows.map(i => `<tr class="${i === ai ? 'best' : ''}"><td>${actHTML(legal[i], hand)}</td><td class="num">${take[i]}</td><td class="num">${par(col[i], 2)}</td><td class="num">${par(af[i], 2)}</td><td>${who(i)}</td></tr>`).join('')}</tbody></table></div>
+      <p class="muted">${legal.length} jugadas posibles; se muestran las 6 que más le gustan al Afinado y las elegidas por los otros. ${gol === ai && ci === ai ? 'Esta vez los tres coinciden.' : 'Los pesos distintos alcanzan para que elijan distinto.'}</p>`;
+  }
+  // una combinación de pesos juega en mesas de 3 contra Coleccionista y Goloso (mismas semillas para todas)
+  const GAMES = 60;
+  function winRate(P) {
+    const me = { act(g, rng) { if (g.phase !== 'play') return botOf('coleccionista').act(g, rng); const l = g.legalActions(); return l[argmax(E.coleccionistaScores(g, l, P))]; } };
+    let w = 0;
+    for (let k = 0; k < GAMES; k++) {
+      const seat = k % 3, others = [botOf('coleccionista'), botOf('goloso')], t = [];
+      for (let q = 0, j = 0; q < 3; q++) t.push(q === seat ? me : others[j++]);
+      const r = E.playGame(t, E.makeRng(9100 + k));
+      if (r.winners.includes(seat)) w += 1 / r.winners.length;
+    }
+    return w / GAMES;
+  }
+  let searching = false;
+  function search() {
+    if (searching) return;
+    searching = true; $('lbsearch').disabled = true;
+    const rng = seed(17), tried = [{ name: 'Coleccionista (a ojo)', P: E.DEFAULT, ref: true }, { name: 'Afinado', P: E.AFINADO, ref: true }];
+    for (let i = 1; i <= 12; i++) tried.push({ name: `Combinación ${i}`, P: Object.fromEntries(W.map(([k]) => [k, E.DEFAULT[k] * Math.exp(Math.log(0.4) + rng() * Math.log(2.5 / 0.4))])) });
+    const render = () => {
+      const done = tried.filter(t => t.win != null).sort((a, b) => b.win - a.win), best = done.find(t => !t.ref);
+      $('lbres').innerHTML = `<div class="scroll"><table class="dec"><thead><tr><th>Pesos</th><th>big</th><th>w_new</th><th>w_part</th><th>w_done</th><th>draw</th><th>Gana</th></tr></thead><tbody>
+        ${done.map(t => `<tr class="${t === best ? 'best' : ''}"><td>${t.ref ? `<b>${t.name}</b>` : t.name}</td>${['big', 'w_new', 'w_part', 'w_done', 'draw'].map(k => `<td class="num">${fmt(t.P[k], 2)}</td>`).join('')}<td class="num"><b>${fmt(t.win * 100, 0)}%</b></td></tr>`).join('')}</tbody></table></div>
+        <p class="stat">${done.length} de ${tried.length} medidas${done.length < tried.length ? '…' : '.'}</p>
+        ${done.length === tried.length ? `<p>La mejor combinación nueva ganó el <b>${fmt(best.win * 100, 0)}%</b>. ¿Las que ganan más tienen <code>w_part</code> más alto que <code>w_new</code>? Con 60 partidas, el azar solo puede mover el resultado hasta unos ±12 puntos: la búsqueda real usó muchas más partidas por combinación, y aun así a la ganadora hubo que volver a medirla en partidas nuevas.</p>` : ''}`;
+    };
+    let i = 0;
+    const step = () => { tried[i].win = winRate(tried[i].P); i++; render(); if (i < tried.length) setTimeout(step, 0); else { searching = false; $('lbsearch').disabled = false; $('lbsearch').textContent = 'Probar otras 12'; } };
+    render(); setTimeout(step, 20);
+  }
+  $('lbnew').addEventListener('click', show);
+  $('lbsearch').addEventListener('click', search);
+  show();
+}
+
+// ===================== Lección 2: bandido ε-greedy =====================
 function lesson1(root) {
   const A = EpsGreedy();
   root.innerHTML = `
-    <div><div class="eyebrow">Lección 1 · Sutton y Barto, cap. 2.2 a 2.4</div><h1>El bandido ε-greedy</h1></div>
+    <div><div class="eyebrow">Lección 2 · Sutton y Barto, cap. 2.2 a 2.4</div><h1>El bandido ε-greedy</h1></div>
     <p class="idea">Lleva un cuaderno: para cada situación anota cuánto le rindió en promedio. Casi siempre hace la jugada cuya situación rindió más, y de vez en cuando (con probabilidad ε) prueba una al azar, por si estaba equivocado.</p>
     <div class="card">
       <h2>¿Por qué "bandido"?</h2>
@@ -676,14 +768,14 @@ function lesson1(root) {
     </div>
     <div class="next">
       <a class="btn secondary" href="lab.html#bandido">Verlo entrenar en el Laboratorio</a>
-      <button class="btn" type="button" data-go="2">Lección 2: UCB y gradiente →</button>
+      <button class="btn" type="button" data-go="3">Lección 3: UCB y gradiente →</button>
     </div>`);
 }
 
-// ===================== Lección 2: UCB y bandido por gradiente =====================
+// ===================== Lección 3: UCB y bandido por gradiente =====================
 function lesson2(root) {
   root.innerHTML = `
-    <div><div class="eyebrow">Lección 2 · Sutton y Barto, cap. 2.6 a 2.8</div><h1>UCB y el bandido por gradiente</h1></div>
+    <div><div class="eyebrow">Lección 3 · Sutton y Barto, cap. 2.6 a 2.8</div><h1>UCB y el bandido por gradiente</h1></div>
     <p class="idea">El ε-greedy explora a ciegas: tira la moneda aunque ya conozca bien todas las opciones. Estos dos bandidos exploran con criterio: uno prueba lo que todavía no conoce, el otro aprende cuánto explorar.</p>
     <div class="card">
       <h2>UCB: optimismo ante la incertidumbre</h2>
@@ -727,7 +819,7 @@ H[otras] −= α (r − R̄) π</div></div>
     </div>
     <div class="next">
       <a class="btn secondary" href="lab.html#ucb">UCB en el Laboratorio</a>
-      <button class="btn" type="button" data-go="3">Lección 3: Monte Carlo →</button>
+      <button class="btn" type="button" data-go="4">Lección 4: Monte Carlo →</button>
     </div>`;
   const host = $('l2practice');
   const showAlg = v => {
@@ -740,11 +832,11 @@ H[otras] −= α (r − R̄) π</div></div>
   showAlg('ucb');
 }
 
-// ===================== Lección 3: Monte Carlo =====================
+// ===================== Lección 4: Monte Carlo =====================
 function lesson3(root) {
   const A = MonteCarlo();
   root.innerHTML = `
-    <div><div class="eyebrow">Lección 3 · Sutton y Barto, cap. 5</div><h1>Monte Carlo: aprender de la partida entera</h1></div>
+    <div><div class="eyebrow">Lección 4 · Sutton y Barto, cap. 5</div><h1>Monte Carlo: aprender de la partida entera</h1></div>
     <p class="idea">Espera a que termine la partida y recién ahí aprende: a cada jugada le asigna todo lo que pasó desde ella hasta el final. Así ve consecuencias que el bandido no ve.</p>
     <div class="card">
       <h2>El problema que resuelve</h2>
@@ -780,14 +872,14 @@ para (s, r) en libreta, de atrás para adelante:
     <div class="card">
       <h2>Lo bueno y lo que le falta</h2>
       <div class="pros">
-        <div><h3>Lo bueno</h3><ul><li>Ve consecuencias a largo plazo.</li><li>No hace suposiciones: usa resultados reales.</li><li>Es la base de muchos métodos, incluida la búsqueda de las lecciones 11 y 13.</li></ul></div>
+        <div><h3>Lo bueno</h3><ul><li>Ve consecuencias a largo plazo.</li><li>No hace suposiciones: usa resultados reales.</li><li>Es la base de muchos métodos, incluida la búsqueda de las lecciones 12 y 13.</li></ul></div>
         <div><h3>Lo que le falta</h3><ul><li>Tiene que esperar al final de la partida, que en CuBirds es largo: unas 15 jugadas propias.</li><li>Es muy ruidoso: un mismo G mezcla la suerte de toda la partida, y el Φ con que venía cada jugada (que la tabla no ve) se cuela en el valor. En el ranking queda abajo.</li><li>Le echa la culpa a todas las jugadas por igual. TD, en la próxima lección, ataca esto.</li></ul></div>
       </div>
       <div class="elos" data-elos="tabla:sb_mc_on_policy,tabla:sb_mc_off_policy"></div>
     </div>
     <div class="next">
       <a class="btn secondary" href="lab.html#mc">Verlo entrenar en el Laboratorio</a>
-      <button class="btn" type="button" data-go="4">Lección 4: SARSA y Q-learning →</button>
+      <button class="btn" type="button" data-go="5">Lección 5: SARSA y Q-learning →</button>
     </div>`);
 }
 
@@ -854,7 +946,7 @@ Q ← Q + α · δ = ${fmt(u.old, 3)} + ${fmt(hp.alpha)} · ${par(tgt - u.old)} 
 }
 function lesson4(root) {
   root.innerHTML = `
-    <div><div class="eyebrow">Lección 4 · Sutton y Barto, cap. 6</div><h1>SARSA y Q-learning: aprender jugada a jugada</h1></div>
+    <div><div class="eyebrow">Lección 5 · Sutton y Barto, cap. 6</div><h1>SARSA y Q-learning: aprender jugada a jugada</h1></div>
     <p class="idea">No espera al final. Después de cada jugada compara lo que esperaba con lo que pasó más lo que espera ahora, y corrige la diferencia: el error de <b>diferencia temporal</b> (TD).</p>
     <div class="card">
       <h2>La idea: diferencias temporales</h2>
@@ -893,7 +985,7 @@ Q[s] = Q[s] + α · (objetivo − Q[s])</div>
     </div>
     <div class="next">
       <a class="btn secondary" href="lab.html#q_learning">Verlo entrenar en el Laboratorio</a>
-      <button class="btn" type="button" data-go="5">Lección 5: n pasos y trazas →</button>
+      <button class="btn" type="button" data-go="6">Lección 6: n pasos y trazas →</button>
     </div>`;
   const host = $('l4practice');
   const showAlg = v => {
@@ -974,7 +1066,7 @@ function MultiStep(kind) {
 }
 function lesson5(root) {
   root.innerHTML = `
-    <div><div class="eyebrow">Lección 5 · Sutton y Barto, cap. 7 y 12</div><h1>n pasos y trazas</h1></div>
+    <div><div class="eyebrow">Lección 6 · Sutton y Barto, cap. 7 y 12</div><h1>n pasos y trazas</h1></div>
     <p class="idea">Monte Carlo espera al final (mucho ruido); TD mira un solo paso (mucho sesgo). Hay un punto medio: mirar unos cuantos pasos reales, o repartir cada sorpresa entre las jugadas recientes.</p>
     <div class="card">
       <h2>El problema de la asignación de crédito</h2>
@@ -995,14 +1087,14 @@ function lesson5(root) {
     <div class="card">
       <h2>Lo bueno y lo que les falta</h2>
       <div class="pros">
-        <div><h3>Lo bueno</h3><ul><li>La información llega mucho más rápido a las jugadas que la provocaron.</li><li>Ajustando n o λ se elige el punto justo entre ruido y sesgo.</li><li>Las trazas son la base de TD-Gammon (lección 7).</li></ul></div>
+        <div><h3>Lo bueno</h3><ul><li>La información llega mucho más rápido a las jugadas que la provocaron.</li><li>Ajustando n o λ se elige el punto justo entre ruido y sesgo.</li><li>Las trazas son la base de TD-Gammon (lección 8).</li></ul></div>
         <div><h3>Lo que les falta</h3><ul><li>Un parámetro más para ajustar.</li><li>Siguen siendo tablas: no generalizan entre situaciones parecidas. En CuBirds quedan junto a las demás tablas.</li></ul></div>
       </div>
       <div class="elos" data-elos="tabla:sb_sarsa_n,tabla:sb_tree_backup,tabla:sb_sarsa_lambda,tabla:sb_q_lambda"></div>
     </div>
     <div class="next">
       <a class="btn secondary" href="lab.html#sarsa_lambda">Verlo entrenar en el Laboratorio</a>
-      <button class="btn" type="button" data-go="6">Lección 6: Dyna-Q →</button>
+      <button class="btn" type="button" data-go="7">Lección 7: Dyna-Q →</button>
     </div>`;
   const host = $('l5practice');
   const showAlg = v => {
@@ -1070,7 +1162,7 @@ Q = ${fmt(u.old, 3)} → <b>${fmt(u.now, 3)}</b></div>` },
 }
 function lesson6(root) {
   root.innerHTML = `
-    <div><div class="eyebrow">Lección 6 · Sutton y Barto, cap. 8</div><h1>Dyna-Q: planificar con un modelo aprendido</h1></div>
+    <div><div class="eyebrow">Lección 7 · Sutton y Barto, cap. 8</div><h1>Dyna-Q: planificar con un modelo aprendido</h1></div>
     <p class="idea">Además de aprender de lo que juega, guarda lo que le pasó en una memoria y, entre jugada y jugada, "sueña": repasa experiencias viejas como si las volviera a vivir.</p>
     <div class="card">
       <h2>Experiencia real y experiencia imaginada</h2>
@@ -1097,7 +1189,7 @@ function lesson6(root) {
     </div>
     <div class="next">
       <a class="btn secondary" href="lab.html#dyna_q">Verlo entrenar en el Laboratorio</a>
-      <button class="btn" type="button" data-go="7">Lección 7: aproximación de funciones →</button>
+      <button class="btn" type="button" data-go="8">Lección 8: aproximación de funciones →</button>
     </div>`);
 }
 
@@ -1120,7 +1212,7 @@ function weightBars(w, top = 12, onlyAction = false) {
   }).join('')}</div>`;
 }
 
-// ===================== Lección 7: aproximación lineal =====================
+// ===================== Lección 8: aproximación lineal =====================
 function LinearAgent() {
   const rng = seed(37), hp = { eps: 0.1, alpha: 0.01 };
   let w = new Array(E.DIM).fill(0), b = 0, pending = null;
@@ -1176,11 +1268,11 @@ cada peso:  w ← w + α · δ · x</div>${changed.length ? `<p>Los pesos que m�
 function lesson7(root) {
   const A = LinearAgent();
   root.innerHTML = `
-    <div><div class="eyebrow">Lección 7 · Sutton y Barto, cap. 9 a 12 y 16.1</div><h1>Aproximación de funciones: de tablas a pesos</h1></div>
+    <div><div class="eyebrow">Lección 8 · Sutton y Barto, cap. 9 a 12 y 16.1</div><h1>Aproximación de funciones: de tablas a pesos</h1></div>
     <p class="idea">En vez de una tabla con un casillero por situación, una fórmula: cada jugada se describe con muchos números y el valor es la suma de cada número por su peso. Lo que aprende de una jugada le sirve para todas las parecidas.</p>
     <div class="card">
       <h2>El techo de las tablas</h2>
-      <p>Las tablas de las lecciones 1 a 6 quedaron todas en la mitad de abajo del ranking. Dos razones: la clave de 8 rasgos no ve casi nada del estado (qué especies tiene en la mano, qué colecciona el rival), y cada casillero aprende solo, sin ayuda de los vecinos.</p>
+      <p>Las tablas de las lecciones 2 a 7 quedaron todas en la mitad de abajo del ranking. Dos razones: la clave de 8 rasgos no ve casi nada del estado (qué especies tiene en la mano, qué colecciona el rival), y cada casillero aprende solo, sin ayuda de los vecinos.</p>
     </div>
     <div class="card">
       <h2>La idea: un peso por característica</h2>
@@ -1213,18 +1305,18 @@ w = w + α · δ · x</div>
         <div><h3>Lo bueno</h3><ul><li>Generaliza: aprende de pocas jugadas y lo aplica a situaciones que nunca vio.</li><li>Las características incluyen el estado, así que puede descontar el potencial con que venía la partida: el sesgo que arruinaba a las tablas desaparece.</li><li>LSTD, que resuelve los pesos de una vez, queda entre los primeros del ranking.</li></ul></div>
         <div><h3>Lo que le falta</h3><ul><li>Lo lineal no capta combinaciones; para eso hacen falta redes.</li><li>Off-policy y con aproximación (Q-learning lineal), TD puede volverse inestable: la "tríada mortal" del cap. 11.</li><li>Elegir buenas características es la mitad del trabajo.</li></ul></div>
       </div>
-      <div class="elos" data-elos="lineal:sb_lstd,lineal:sb_q_semigradiente,lineal:sb_sarsa_semigradiente,lineal:sb_true_online_sarsa_lambda,valor:sb_td_gammon,lineal:sb_mc_gradiente"></div>
+      <div class="elos" data-elos="lineal:sb_lstd,lineal:sb_q_semigradiente,lineal:sb_sarsa_semigradiente,lineal:sb_sarsa_semigradiente_n,lineal:sb_true_online_sarsa_lambda,valor:sb_td_gammon,lineal:sb_mc_gradiente"></div>
     </div>
     <div class="next">
       <a class="btn secondary" href="lab.html#lstd">LSTD en el Laboratorio</a>
-      <button class="btn" type="button" data-go="8">Lección 8: REINFORCE y actor-crítico →</button>
+      <button class="btn" type="button" data-go="9">Lección 9: REINFORCE y actor-crítico →</button>
     </div>`);
   const showW = () => { $('l7w').innerHTML = weightBars(A.weights()); };
   $('l7wb').addEventListener('click', showW);
   showW();
 }
 
-// ===================== Lección 8: gradiente de política =====================
+// ===================== Lección 9: gradiente de política =====================
 function PolicyAgent(kind) {
   const rng = seed(41), hp = { alpha: 0.05, alphaW: 0.02 };
   let th = new Array(E.DIM).fill(0), u = new Array(E.G_DIM + 1).fill(0), diary = [];
@@ -1298,7 +1390,7 @@ function PolicyAgent(kind) {
 }
 function lesson8(root) {
   root.innerHTML = `
-    <div><div class="eyebrow">Lección 8 · Sutton y Barto, cap. 13</div><h1>REINFORCE y actor-crítico: aprender la política directamente</h1></div>
+    <div><div class="eyebrow">Lección 9 · Sutton y Barto, cap. 13</div><h1>REINFORCE y actor-crítico: aprender la política directamente</h1></div>
     <p class="idea">En vez de aprender cuánto vale cada jugada y elegir la mejor, aprende directamente con qué probabilidad hacer cada una. Si algo salió mejor de lo esperado, lo hace más seguido.</p>
     <div class="card">
       <h2>Por qué aprender la política</h2>
@@ -1338,7 +1430,7 @@ para cada jugada, de atrás para adelante:
     </div>
     <div class="next">
       <a class="btn secondary" href="lab.html#actor_critic">Verlo entrenar en el Laboratorio</a>
-      <button class="btn" type="button" data-go="9">Lección 9: PPO →</button>
+      <button class="btn" type="button" data-go="10">Lección 10: PPO →</button>
     </div>`;
   const host = $('l8practice');
   const showAlg = v => {
@@ -1359,14 +1451,14 @@ function situation(k = 51) {
 const situationHTML = ep => `${tableView(ep.g.rows)}${countsView(ep.hand(), 'Su mano')}${countsView(ep.g.cols[0], 'Su colección')}
   <p class="stat">Rivales: ${ep.g.cols.slice(1).map((c, i) => `${NAMES[i + 1]} ${sum(c)} pájaros`).join(' · ')}.</p>`;
 
-// ===================== Lección 9: PPO =====================
+// ===================== Lección 10: PPO =====================
 function lesson9(root) {
   root.innerHTML = `
-    <div><div class="eyebrow">Lección 9 · Schulman y otros, 2017</div><h1>PPO: gradiente de política con freno</h1></div>
+    <div><div class="eyebrow">Lección 10 · Schulman y otros, 2017</div><h1>PPO: gradiente de política con freno</h1></div>
     <p class="idea">Actor-crítico, pero con una red en vez de una fórmula lineal, muchas partidas por tanda y un freno: en cada actualización, la probabilidad de una jugada no puede cambiar más que un poquito.</p>
     <div class="card">
       <h2>El problema: pasos demasiado grandes</h2>
-      <p>En la lección 8, un α grande podía arruinar en una actualización una política que costó miles de partidas. PPO junta una tanda de partidas, calcula para cada jugada si salió mejor o peor de lo esperado (la <b>ventaja</b>, con GAE) y la repasa varias veces, pero <b>recorta</b> el objetivo: si la probabilidad de una jugada ya subió más de un 20% respecto de cuando se jugó, deja de empujarla.</p>
+      <p>En la lección 9, un α grande podía arruinar en una actualización una política que costó miles de partidas. PPO junta una tanda de partidas, calcula para cada jugada si salió mejor o peor de lo esperado (la <b>ventaja</b>, con GAE) y la repasa varias veces, pero <b>recorta</b> el objetivo: si la probabilidad de una jugada ya subió más de un 20% respecto de cuando se jugó, deja de empujarla.</p>
       <div class="calc">razón    ρ = π_nueva(jugada) / π_vieja(jugada)
 objetivo = mín( ρ · A,  recorte(ρ, 0,8, 1,2) · A )</div>
       <div class="controls"><label class="slider" for="l9r">ρ = <b id="l9rv">1,3</b><input type="range" id="l9r" min="0.5" max="1.6" step="0.05" value="1.3"></label><label class="slider" for="l9a">ventaja A = <b id="l9av">+1</b><input type="range" id="l9a" min="-1" max="1" step="2" value="1"></label></div>
@@ -1392,13 +1484,13 @@ objetivo = mín( ρ · A,  recorte(ρ, 0,8, 1,2) · A )</div>
       <h2>Lo bueno y lo que le falta</h2>
       <div class="pros">
         <div><h3>Lo bueno</h3><ul><li>Estable: el freno evita los desastres de un paso grande.</li><li>Aprovecha cada tanda varias veces.</li><li>Es de los mejores agentes del ranking que aprenden sólo jugando, sin buscar.</li></ul></div>
-        <div><h3>Lo que le falta</h3><ul><li>Necesita muchas partidas: decenas de miles.</li><li>No piensa en la jugada: si una situación es rara, la red puede equivocarse feo. Combinarlo con búsqueda es la lección 12.</li></ul></div>
+        <div><h3>Lo que le falta</h3><ul><li>Necesita muchas partidas: decenas de miles.</li><li>No piensa en la jugada: si una situación es rara, la red puede equivocarse feo. Combinarlo con búsqueda es la lección 13.</li></ul></div>
       </div>
       <div class="elos" data-elos="red:ppo"></div>
     </div>
     <div class="next">
       <a class="btn secondary" href="lab.html#ppo">PPO liviano en el Laboratorio</a>
-      <button class="btn" type="button" data-go="10">Lección 10: neuroevolución →</button>
+      <button class="btn" type="button" data-go="11">Lección 11: neuroevolución →</button>
     </div>`;
   const clip = () => {
     const r = +$('l9r').value, A = +$('l9a').value, c = Math.min(1.2, Math.max(0.8, r)), obj = Math.min(r * A, c * A);
@@ -1421,10 +1513,10 @@ objetivo = mín( ρ · A,  recorte(ρ, 0,8, 1,2) · A )</div>
   show().catch(() => { $('l9sit').innerHTML = '<p class="muted">No se pudo cargar el modelo de PPO.</p>'; });
 }
 
-// ===================== Lección 10: neuroevolución =====================
+// ===================== Lección 11: neuroevolución =====================
 function lesson10(root) {
   root.innerHTML = `
-    <div><div class="eyebrow">Lección 10 · Salimans y otros, 2017 · algoritmos genéticos</div><h1>Neuroevolución: aprender sin gradientes</h1></div>
+    <div><div class="eyebrow">Lección 11 · Salimans y otros, 2017 · algoritmos genéticos</div><h1>Neuroevolución: aprender sin gradientes</h1></div>
     <p class="idea">No calcula hacia dónde mejorar: prueba. Hace variaciones al azar de la red, las pone a jugar y se queda con lo que ganó más. Como la evolución, pero con redes.</p>
     <div class="card">
       <h2>Dos versiones</h2>
@@ -1459,7 +1551,7 @@ repetir:
     </div>
     <div class="next">
       <a class="btn secondary" href="lab.html#es">Verla evolucionar en el Laboratorio</a>
-      <button class="btn" type="button" data-go="11">Lección 11: búsqueda →</button>
+      <button class="btn" type="button" data-go="12">Lección 12: búsqueda →</button>
     </div>`;
   const rng = seed(43), sigma = 0.3, alpha = 0.3;
   const gauss = () => { let u = 0, v = 0; while (!u) u = rng(); while (!v) v = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
@@ -1483,7 +1575,7 @@ repetir:
   setTimeout(generation, 50);
 }
 
-// ===================== Lección 11: búsqueda =====================
+// ===================== Lección 12: búsqueda =====================
 // Una simulación de una vuelta de mesa con todos jugando como Afinado, narrada.
 function narrateRollout(sim, me, a, rng) {
   const from = sim.log.length;
@@ -1507,16 +1599,16 @@ function rootSearch(g, iterations, rng, checkpoints) {
 }
 function lesson11(root) {
   root.innerHTML = `
-    <div><div class="eyebrow">Lección 11 · Sutton y Barto, cap. 8.10 y 8.11</div><h1>Búsqueda: pensar en vez de aprender</h1></div>
+    <div><div class="eyebrow">Lección 12 · Sutton y Barto, cap. 8.10 y 8.11</div><h1>Búsqueda: pensar en vez de aprender</h1></div>
     <p class="idea">No aprende nada entre partidas. En cada jugada imagina muchas veces cómo podría seguir la partida, con las cartas que no ve repartidas entre los rivales, y hace la jugada que mejor resultado dio en su imaginación.</p>
     <div class="card">
       <h2>Planificar en el momento</h2>
-      <p>Dyna-Q (lección 6) usaba un modelo para aprender. Acá el modelo se usa para <b>decidir</b>: antes de cada jugada, el agente simula el futuro. Tenemos un modelo perfecto, el propio juego; lo que no conoce son las cartas ocultas.</p>
+      <p>Dyna-Q (lección 7) usaba un modelo para aprender. Acá el modelo se usa para <b>decidir</b>: antes de cada jugada, el agente simula el futuro. Tenemos un modelo perfecto, el propio juego; lo que no conoce son las cartas ocultas.</p>
       <dl class="gloss">
         <dt>Determinización</dt><dd>Junta las cartas que no ve (las manos rivales, el mazo y el descarte) y en cada simulación las reparte al azar, respetando cuántas tiene cada uno.</dd>
         <dt>Modelo de rivales</dt><dd>En la simulación todos juegan como Afinado durante una vuelta de mesa. Después evalúa cómo quedó: bandadas que le faltan, valor de su mano y pájaros, menos el mejor rival.</dd>
         <dt>Experto (rollouts planos)</dt><dd>Toma las 6 mejores jugadas según Afinado y le da 8 simulaciones a cada una.</dd>
-        <dt>ISMCTS</dt><dd>Usa UCB (lección 2) para mandar más simulaciones a las jugadas que vienen saliendo bien, y arma un árbol con sus jugadas siguientes.</dd>
+        <dt>ISMCTS</dt><dd>Usa UCB (lección 3) para mandar más simulaciones a las jugadas que vienen saliendo bien, y arma un árbol con sus jugadas siguientes.</dd>
       </dl>
     </div>
     <div class="card">
@@ -1544,7 +1636,7 @@ jugar la candidata con más simulaciones</div>
     </div>
     <div class="next">
       <a class="btn secondary" href="lab.html#ismcts">Verlo pensar en el Laboratorio</a>
-      <button class="btn" type="button" data-go="12">Lección 12: AlphaZero →</button>
+      <button class="btn" type="button" data-go="13">Lección 13: AlphaZero →</button>
     </div>`;
   function show() {
     const ep = situation(71), g = ep.g, rng = seed(73), hand = ep.hand();
@@ -1572,14 +1664,14 @@ jugar la candidata con más simulaciones</div>
   setTimeout(show, 20);
 }
 
-// ===================== Lección 12: AlphaZero =====================
+// ===================== Lección 13: AlphaZero =====================
 function lesson12(root) {
   root.innerHTML = `
-    <div><div class="eyebrow">Lección 12 · Anthony y otros, 2017 · Silver y otros, 2017</div><h1>Expert Iteration y AlphaZero: pensar y aprender juntos</h1></div>
+    <div><div class="eyebrow">Lección 13 · Anthony y otros, 2017 · Silver y otros, 2017</div><h1>Expert Iteration y AlphaZero: pensar y aprender juntos</h1></div>
     <p class="idea">Una red aprende a jugar imitando a una búsqueda, y la búsqueda piensa mejor usando a la red. Cada una mejora a la otra, vuelta tras vuelta.</p>
     <div class="card">
       <h2>Juntar las dos mitades</h2>
-      <p>La búsqueda (lección 11) piensa bien pero no aprende, y su evaluación es fija. Las redes (lecciones 7 a 9) aprenden pero no piensan en la jugada. <b>Expert Iteration</b> las combina: la búsqueda (el experto) juega y anota cómo repartió sus simulaciones; la red (el aprendiz) aprende a predecir ese reparto; y en la vuelta siguiente el experto usa al aprendiz. <b>AlphaZero</b> es la versión más conocida: la red da las dos cosas que la búsqueda necesitaba de afuera.</p>
+      <p>La búsqueda (lección 12) piensa bien pero no aprende, y su evaluación es fija. Las redes (lecciones 8 a 10) aprenden pero no piensan en la jugada. <b>Expert Iteration</b> las combina: la búsqueda (el experto) juega y anota cómo repartió sus simulaciones; la red (el aprendiz) aprende a predecir ese reparto; y en la vuelta siguiente el experto usa al aprendiz. <b>AlphaZero</b> es la versión más conocida: la red da las dos cosas que la búsqueda necesitaba de afuera.</p>
       <dl class="gloss">
         <dt>Política (priors)</dt><dd>Qué jugadas parecen buenas: la búsqueda prueba primero esas (PUCT, una variante de UCB que reparte según la red).</dd>
         <dt>Valor</dt><dd>Qué tan bien está cada jugador: al llegar a una posición nueva, la red la evalúa en vez de simular con Afinado.</dd>
@@ -1647,18 +1739,19 @@ entrenamiento (cada vuelta):
 // ===================== índice =====================
 const LESSONS = [
   { n: 0, title: 'Qué es aprender por refuerzo', sub: 'agente, recompensa, potencial, explorar o aprovechar', run: lesson0 },
-  { n: 1, title: 'El bandido ε-greedy', sub: 'aprender promediando y explorar al azar', run: lesson1 },
-  { n: 2, title: 'UCB y el bandido por gradiente', sub: 'explorar con criterio', run: lesson2 },
-  { n: 3, title: 'Monte Carlo', sub: 'aprender de la partida entera', run: lesson3 },
-  { n: 4, title: 'SARSA y Q-learning', sub: 'aprender jugada a jugada (TD)', run: lesson4 },
-  { n: 5, title: 'n pasos y trazas', sub: 'el punto medio entre Monte Carlo y TD', run: lesson5 },
-  { n: 6, title: 'Dyna-Q', sub: 'planificar con un modelo aprendido', run: lesson6 },
-  { n: 7, title: 'Aproximación de funciones', sub: 'de tablas a pesos y redes', run: lesson7 },
-  { n: 8, title: 'REINFORCE y actor-crítico', sub: 'aprender la política directamente', run: lesson8 },
-  { n: 9, title: 'PPO', sub: 'gradiente de política con freno', run: lesson9 },
-  { n: 10, title: 'Neuroevolución', sub: 'estrategias evolutivas y algoritmo genético', run: lesson10 },
-  { n: 11, title: 'Búsqueda: rollouts e ISMCTS', sub: 'pensar sin aprender', run: lesson11 },
-  { n: 12, title: 'Expert Iteration y AlphaZero', sub: 'pensar y aprender juntos', run: lesson12 },
+  { n: 1, title: 'Bots escritos a mano', sub: 'reglas fijas y pesos buscados al azar', run: lessonBots },
+  { n: 2, title: 'El bandido ε-greedy', sub: 'aprender promediando y explorar al azar', run: lesson1 },
+  { n: 3, title: 'UCB y el bandido por gradiente', sub: 'explorar con criterio', run: lesson2 },
+  { n: 4, title: 'Monte Carlo', sub: 'aprender de la partida entera', run: lesson3 },
+  { n: 5, title: 'SARSA y Q-learning', sub: 'aprender jugada a jugada (TD)', run: lesson4 },
+  { n: 6, title: 'n pasos y trazas', sub: 'el punto medio entre Monte Carlo y TD', run: lesson5 },
+  { n: 7, title: 'Dyna-Q', sub: 'planificar con un modelo aprendido', run: lesson6 },
+  { n: 8, title: 'Aproximación de funciones', sub: 'de tablas a pesos y redes', run: lesson7 },
+  { n: 9, title: 'REINFORCE y actor-crítico', sub: 'aprender la política directamente', run: lesson8 },
+  { n: 10, title: 'PPO', sub: 'gradiente de política con freno', run: lesson9 },
+  { n: 11, title: 'Neuroevolución', sub: 'estrategias evolutivas y algoritmo genético', run: lesson10 },
+  { n: 12, title: 'Búsqueda: rollouts e ISMCTS', sub: 'pensar sin aprender', run: lesson11 },
+  { n: 13, title: 'Expert Iteration y AlphaZero', sub: 'pensar y aprender juntos', run: lesson12 },
 ];
 let current = -1;
 function renderToc() {

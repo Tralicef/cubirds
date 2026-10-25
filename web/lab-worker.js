@@ -648,6 +648,74 @@ function ExItLite(hp, rng) {
   };
 }
 
+// ---------------- AlphaZero liviano ----------------
+// Una "red" lineal con dos cabezas: política sobre las 65 características de cada jugada
+// y valor (probabilidad de ganar de cada jugador, sobre sus características globales).
+// Búsqueda PUCT en la raíz: la política da los priors y juega por los rivales imaginados;
+// tras una vuelta de mesa, la cabeza de valor evalúa en vez de la fórmula del Experto.
+// La política aprende las visitas; el valor, quién ganó. Como en AlphaZero, el valor aprende
+// desde el asiento de cada jugador: al principio solo ganan los bots, y de ellos aprende qué es ir ganando.
+function AZLite(hp, rng) {
+  const th = new Array(D).fill(0), u = new Array(E.G_DIM).fill(0), agree = [], verr = [];
+  let lastEp = null;
+  const probs = X => softmax(X.map(x => dotv(x, th)));
+  const sig = z => 1 / (1 + Math.exp(-z));
+  const winP = (g, p) => sig(dotv(Array.from(E.globalFeatures(g, p)), u));
+  const value = (g, me) => { let s = 0, mine = 0; for (let q = 0; q < g.n; q++) { const v = winP(g, q); s += v; if (q === me) mine = v; } return mine / s; };
+  const policy = { act(g, r) { if (g.phase !== 'play') return botOf('afinado').act(g, r); const [legal, X] = E.decision(g); return legal[sample(probs(X.map(x => Array.from(x))), r)]; } };
+  function search(g, iterations, X) {
+    const me = g.cur, legal = g.legalActions(), p = probs(X);
+    const cands = legal, prior = p;
+    const n = new Array(cands.length).fill(0), w = new Array(cands.length).fill(0);
+    for (let it = 0; it < iterations; it++) {
+      const sq = Math.sqrt(it + 1), q0 = it ? sum(w) / it : 1 / g.n;
+      let j = 0, bu = -Infinity;
+      cands.forEach((_, i) => { const v = (n[i] ? w[i] / n[i] : q0) + hp.c * prior[i] * sq / (1 + n[i]); if (v > bu) { bu = v; j = i; } });
+      const sim = E.determinize(g, me, rng);
+      sim.step(cands[j]);
+      const stop = sim.turn + sim.n;
+      while (!sim.done && sim.turn < stop) sim.step((sim.cur === me ? botOf('afinado') : policy).act(sim, rng));
+      w[j] += sim.done ? (sim.winners.includes(me) ? 1 / sim.winners.length : 0) : value(sim, me); n[j]++;
+    }
+    return { cands, prior, n, w, best: cands[argmax(n)] };
+  }
+  return {
+    type: 'pesos', curveEvery: 10, evalEvery: 60, shaping: false,
+    act(ep) {
+      const X = ep.feats(), p = probs(X), legal = ep.legal(), gx = Array.from({ length: ep.n }, (_, q) => Array.from(E.globalFeatures(ep.g, q)));
+      lastEp = ep;
+      const s = search(ep.g, hp.iterations, X), tot = sum(s.n);
+      const target = legal.map(a => { const k = s.cands.indexOf(a); return k < 0 ? 0 : s.n[k] / tot; });
+      const j = legal.indexOf(s.best), k = s.cands.indexOf(s.best);
+      return { X, p, gx, v0: value(ep.g, ep.g.cur), target, j, cands: s.cands, visits: s.n, means: s.n.map((ni, i) => ni ? s.w[i] / ni : null),
+        why: `la búsqueda la visitó más (${s.n[k]} de ${tot}); la red le daba ${(p[j] * 100).toFixed(0)}%` };
+    },
+    greedyIndex(ep) { return argmax(ep.feats().map(x => dotv(x, th))); },
+    update(step) {
+      // política: ∇ entropía cruzada con las visitas = (objetivo − π) · x
+      const p = probs(step.X);
+      agree.push(argmax(p) === step.j ? 1 : 0); if (agree.length > 300) agree.shift();
+      step.X.forEach((x, i) => { const d = step.target[i] - p[i]; if (d) for (let m = 0; m < D; m++) th[m] += hp.alpha * d * x[m]; });
+      const p2 = probs(step.X);
+      return { text: `política: la búsqueda le dio a esta jugada el ${(step.target[step.j] * 100).toFixed(0)}% de las visitas; la red pasa de ${(p[step.j] * 100).toFixed(1)}% a ${(p2[step.j] * 100).toFixed(1)}%\nvalor: estimaba ${(step.v0 * 100).toFixed(0)}% de ganar (se corrige al terminar la partida)` };
+    },
+    endEpisode(traj) {
+      // valor: regresión logística con quién ganó, en cada decisión y desde el asiento de cada jugador
+      const winners = lastEp.g.winners;
+      for (const st of traj) st.gx.forEach((x, q) => {
+        const v = sig(dotv(x, u)), d = (winners.includes(q) ? 1 : 0) - v;
+        verr.push(Math.abs(d)); if (verr.length > 300) verr.shift();
+        for (let i = 0; i < u.length; i++) u[i] += hp.alphaW * d * x[i];
+      });
+    },
+    view() {
+      const a = agree.length ? `En las últimas ${agree.length} jugadas, la red sola eligió lo mismo que la búsqueda el ${(100 * sum(agree) / agree.length).toFixed(0)}% de las veces.` : '';
+      const v = verr.length ? ` La cabeza de valor se equivoca en ${(100 * sum(verr) / verr.length).toFixed(0)} puntos de probabilidad en promedio.` : '';
+      return { kind: 'weights', w: th.slice(), note: a + v };
+    },
+  };
+}
+
 // ---------------- catálogo ----------------
 const ALGS = {
   bandido: { make: (hp, r) => Tabular(hp, r, 'bandido'), hp: { epsilon: 0.1 } },
@@ -683,6 +751,7 @@ const ALGS = {
   experto: { make: (hp, r) => Expert(hp, r), hp: { samples: 8 } },
   ismcts: { make: (hp, r) => Planner(hp, r), hp: { iterations: 100, c: 0.7 } },
   exit: { make: (hp, r) => ExItLite(hp, r), hp: { iterations: 40, alpha: 0.05 } },
+  az: { make: (hp, r) => AZLite(hp, r), hp: { iterations: 40, c: 0.7, alpha: 0.02, alphaW: 0.02 } },
 };
 
 // ---------------- bucle ----------------

@@ -266,6 +266,9 @@ const INFO = {
   exit: { group: G8, name: 'Expert Iteration (liviano)', chap: 'Anthony, Tian y Barber, 2017',
     what: 'Junta búsqueda y aprendizaje. El experto es una búsqueda que imagina a los rivales jugando como el aprendiz; el aprendiz es una política lineal que aprende a imitar cómo reparte el experto sus simulaciones. Lo que se evalúa es el aprendiz solo, sin búsqueda.',
     rule: 'experto: búsqueda con UCB (rivales = aprendiz)\nobjetivo(a) = simulaciones(a) / total\naprendiz:  θ ← θ + α · Σ_a [objetivo(a) − π(a)] · x_a' },
+  az: { group: G8, name: 'AlphaZero (liviano)', chap: 'Silver et al., 2017',
+    what: 'Como Expert Iteration, pero la red hace todo lo que la búsqueda necesita: su política elige qué jugadas mirar primero (PUCT) y juega por los rivales imaginados, y una segunda cabeza estima la probabilidad de ganar de cada jugador, así la búsqueda no usa la fórmula del Experto. La política aprende las visitas; el valor, quién ganó. Se evalúa la red sola. Acá la red es lineal y la búsqueda mira una vuelta de mesa.',
+    rule: 'búsqueda: elegir  máx  Q(a) + c · π(a) · √N / (1 + N(a))\n  rivales: muestrean π;  tras una vuelta: v̂(mío) / Σ v̂(todos)\npolítica:  θ ← θ + α · Σ_a [visitas(a)/N − π(a)] · x_a\nvalor:     u ← u + α_w · (ganó − v̂) · x_global' },
 };
 const HP = {
   epsilon: ['ε (exploración)', 0, 0.5, 0.01], alpha: ['α (paso)', 0.001, 0.3, 0.001], c: ['c (bono UCB)', 0, 3, 0.05],
@@ -478,6 +481,7 @@ function renderSlow(slow) {
     (state.alg === 'ismcts' ? 'No aprende: en cada jugada vuelve a simular desde cero. En cada candidata, cuántas simulaciones recibió y su valor promedio.'
       : state.alg === 'experto' ? 'No aprende: en cada jugada vuelve a imaginar manos desde cero. En cada candidata, su valor promedio en lo que imaginó.'
       : state.alg === 'exit' ? 'Juega el experto (la búsqueda); en cada candidata, cuántas simulaciones le dio. Mientras tanto el aprendiz se corrige para parecerse.'
+      : state.alg === 'az' ? 'Juega la búsqueda guiada por la red; en cada candidata, cuántas visitas le dio y su probabilidad de ganar estimada. La política se corrige en cada jugada; el valor, al terminar la partida (por eso r no tiene shaping).'
       : 'Mientras jugaba, también aprendía: abajo de cada jugada está la cuenta que hizo. r es lo que ganó hasta su próxima jugada (cambio de potencial, y 1 si ganó la partida).');
   $('turns').innerHTML = slow.turns.map((t, i) => {
     const cands = t.show.map(c => {

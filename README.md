@@ -30,8 +30,8 @@ distintas o 2 especies con 3 pájaros.
 - `web/`: el sitio, publicado en https://cu-birds.vercel.app:
   - `index.html`: el juego, contra cualquier agente de la arena con su Elo.
   - `arena.html`: torneos (ligas y eliminatorias), ranking Elo y simulación en el navegador.
-  - `lab.html` + `lab-worker.js`: 33 algoritmos aprendiendo en vivo, con curva, mapa de calor o pesos y una partida en cámara lenta.
-  - `aprender.html`: curso de aprendizaje por refuerzo en 13 lecciones, del bandido ε-greedy a AlphaZero: cada una muestra una jugada real paso a paso (cómo piensa y cómo aprende, con las cuentas), se puede entrenar en la página y trae su lugar en el ranking.
+  - `lab.html` + `lab-worker.js`: 34 algoritmos aprendiendo en vivo (de los bandidos a AlphaZero liviano), con curva, mapa de calor o pesos y una partida en cámara lenta.
+  - `aprender.html`: curso de aprendizaje por refuerzo en 14 lecciones, de los bots escritos a mano (y la búsqueda aleatoria de pesos de Afinado) a AlphaZero: cada una muestra una jugada real paso a paso (cómo piensa y cómo aprende, con las cuentas), se puede entrenar en la página y trae su lugar en el ranking.
 
 ## Bots
 
