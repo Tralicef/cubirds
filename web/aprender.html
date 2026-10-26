@@ -1726,9 +1726,28 @@ entrenamiento (cada vuelta):
     </div>
     <div class="card">
       <h2>Cómo le fue</h2>
-      <p>Con búsqueda, AlphaZero es el mejor agente que aprende del ranking de CuBirds, unos 30 a 40 puntos de Elo arriba de PPO y LSTD. Sólo lo supera el Estratega, un bot escrito a mano copiando lo que hacen AlphaZero y PPO, más un truco que ninguna red aprendió del todo: cerrar la ronda (lección 1). La red sola, sin buscar, juega un poco peor que PPO: aprendió a imitar visitas de una búsqueda corta y con ruido, que es una política más "repartida". Lo que se gana es que <b>red y búsqueda juntas</b> juegan mejor que cualquiera de las dos por separado.</p>
+      <p>Con búsqueda, el AlphaZero original queda arriba de todos los agentes que aprenden de cero, pero por poco: apenas sobre PPO y unos 45 puntos de Elo sobre LSTD. Lo supera el Estratega, un bot escrito a mano copiando lo que hacen AlphaZero y PPO, más un truco que ninguna red aprendió del todo: cerrar la ronda (lección 1). Abajo está la revancha. La red sola, sin buscar, juega un poco peor que PPO: aprendió a imitar visitas de una búsqueda corta y con ruido, que es una política más "repartida". Lo que se gana es que <b>red y búsqueda juntas</b> juegan mejor que cualquiera de las dos por separado.</p>
       <p class="muted">En Toma 6 costó más: al principio su búsqueda jugaba peor que la red sola, porque allá el valor (los toros que faltan en la ronda) tiene muchísima varianza y la primera red de valor miraba sólo el promedio de las cartas de la mano. Con una red de valor que mira carta por carta y 256 simulaciones, la búsqueda pasó a sumar más de un toro por ronda y quedó primera.</p>
       <div class="elos" data-elos="az:alphazero:48,red:alphazero,red:ppo,ismcts"></div>
+    </div>
+    <div class="card">
+      <h2>Revancha: AlphaZero contra el Estratega</h2>
+      <p>¿Se puede entrenar a AlphaZero para que le gane al bot que lo copió? Medimos cada intento en las mismas partidas: mesas de 2 a 5 con el agente, el Estratega y, de relleno, Afinado, PPO y LSTD. La columna dice qué parte de las partidas ganó cada uno.</p>
+      <div class="scroll"><table class="dec"><thead><tr><th>Intento</th><th>Agente</th><th>Estratega</th></tr></thead><tbody>
+        <tr><td>AlphaZero original, 48 simulaciones</td><td class="num">29%</td><td class="num">44%</td></tr>
+        <tr><td>… con la regla de cerrar la ronda impuesta a mano</td><td class="num">32%</td><td class="num">41%</td></tr>
+        <tr><td>… entrenado 6 vueltas más en una liga con el Estratega</td><td class="num">32%</td><td class="num">43%</td></tr>
+        <tr><td>AlphaZero original, 192 simulaciones</td><td class="num">38%</td><td class="num">37%</td></tr>
+        <tr><td>Red que imita al Estratega, sin buscar</td><td class="num">37%</td><td class="num">39%</td></tr>
+        <tr><td>AlphaZero desde el Estratega, 48 simulaciones</td><td class="num">39%</td><td class="num">38%</td></tr>
+        <tr><td>AlphaZero desde el Estratega, 96 simulaciones</td><td class="num">40,5%</td><td class="num">35%</td></tr>
+        <tr class="best"><td>AlphaZero desde el Estratega, 192 simulaciones</td><td class="num">42%</td><td class="num">34%</td></tr>
+      </tbody></table></div>
+      <p class="muted">Cada fila sale de 800 a 2.800 partidas; diferencias de 3 puntos o menos pueden ser ruido.</p>
+      <p>El problema era de <b>arranque</b>. La red original venía de PPO, que casi nunca deja de robar: los priors le daban poca chance a "no robar", así que con 48 simulaciones la búsqueda casi no la probaba. Y como en su autojuego nadie cerraba la ronda, tampoco aprendía a cuidarse de que se la cierren: perdía unas 10 cartas por partida cuando el Estratega vaciaba la mano. Entrenarla más en una liga con el Estratega mejoró mucho su juego contra Afinado, pero casi nada contra él.</p>
+      <p>Lo que funcionó es lo mismo que hizo el primer AlphaGo con las partidas humanas: primero <b>imitar</b>. Una red aprendió de 300.000 decisiones del Estratega (coincide con él en el 81%) y juega casi igual que él. Desde ahí, 8 vueltas de AlphaZero con 96 simulaciones, en una liga contra Estratega, Afinado y PPO, la llevaron a superarlo. Cuanto más busca, más le gana.</p>
+      <p>En el ranking oficial las versiones nuevas quedan a la par del Estratega, arriba de todos los demás: 1678 con 96 simulaciones, 1670 con 48 y 1668 la red sola, contra 1675 del Estratega, con márgenes que se tocan. En mesas con agentes más flojos todos ganan casi igual de seguido; donde se nota la diferencia es en el duelo directo.</p>
+      <div class="elos" data-elos="az:alphazero_estratega:96,az:alphazero_estratega:48,estratega,red:alphazero_estratega,az:alphazero:48"></div>
     </div>
     <div class="next">
       <a class="btn secondary" href="arena.html">Ver el ranking completo</a>

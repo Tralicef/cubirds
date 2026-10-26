@@ -152,7 +152,7 @@ def _eval_one(args):
 # ---------------- PPO en torch ----------------
 
 def train(iters=300, games_per_iter=256, workers=10, out="runs/ppo", lr=3e-4, epochs=4, clip=0.2, lam=0.95,
-          ent=0.01, seed=0, eval_every=10):
+          ent=0.01, seed=0, eval_every=10, start=None, opponents=None):
     import torch
     import torch.nn as nn
 
@@ -164,7 +164,7 @@ def train(iters=300, games_per_iter=256, workers=10, out="runs/ppo", lr=3e-4, ep
             super().__init__()
             self.pi = nn.Sequential(nn.Linear(DIM, HIDDEN), nn.Tanh(), nn.Linear(HIDDEN, HIDDEN), nn.Tanh(), nn.Linear(HIDDEN, 1))
             self.v = nn.Sequential(nn.Linear(G_DIM, HIDDEN), nn.Tanh(), nn.Linear(HIDDEN, 1))
-            P = init_params(seed)
+            P = load(start) if start else init_params(seed)
             with torch.no_grad():
                 for lyr, (w, b) in zip([self.pi[0], self.pi[2], self.pi[4], self.v[0], self.v[2]],
                                        [("W1", "b1"), ("W2", "b2"), ("W3", "b3"), ("V1", "c1"), ("V2", "c2")]):
@@ -179,6 +179,9 @@ def train(iters=300, games_per_iter=256, workers=10, out="runs/ppo", lr=3e-4, ep
                 P[b] = lyr.bias.detach().numpy().copy()
             return P
 
+    if opponents:  # "estratega:0.5,afinado:0.25,self:0.25"; los procesos hijos lo heredan
+        global OPPONENTS
+        OPPONENTS = [(o.rsplit(":", 1)[0], float(o.rsplit(":", 1)[1])) for o in opponents.split(",")]
     net = Net()
     opt = torch.optim.Adam(net.parameters(), lr=lr)
     pool = mp.Pool(workers)
@@ -248,6 +251,7 @@ def train(iters=300, games_per_iter=256, workers=10, out="runs/ppo", lr=3e-4, ep
         row = {"iter": it, "games": it * games_per_iter, "win_index": round(wins / len(eps), 3), "decisions": N,
                "seconds": round(time.time() - t0, 1)}
         if it % eval_every == 0 or it == iters:
+            save(net.params(), os.path.join(out, f"it{it}.json"), meta={"iter": it})
             ev = evaluate(net.params(), pool=pool)
             row["eval"] = ev
             score = sum(ev.values()) / len(ev)
@@ -286,5 +290,8 @@ if __name__ == "__main__":
     ap.add_argument("--ent", type=float, default=0.01)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default="runs/ppo")
+    ap.add_argument("--start", default=None, help="seguir entrenando desde estos pesos")
+    ap.add_argument("--opponents", default=None, help="rivales y pesos, p. ej. estratega:0.5,afinado:0.25,self:0.25")
     a = ap.parse_args()
-    train(iters=a.iters, games_per_iter=a.games, workers=a.workers, lr=a.lr, ent=a.ent, seed=a.seed, out=a.out)
+    train(iters=a.iters, games_per_iter=a.games, workers=a.workers, lr=a.lr, ent=a.ent, seed=a.seed, out=a.out,
+          start=a.start, opponents=a.opponents)

@@ -37,7 +37,7 @@ from cubirds.rl.ppo import HIDDEN, load, save
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-def selfplay(model_path, games, sims, workers, out_dir, seed):
+def selfplay(model_path, games, sims, workers, out_dir, seed, league=None):
     """Lanza `workers` procesos de Node; devuelve la lista de archivos .jsonl."""
     procs, files = [], []
     per = [games // workers + (1 if i < games % workers else 0) for i in range(workers)]
@@ -45,7 +45,8 @@ def selfplay(model_path, games, sims, workers, out_dir, seed):
         f = os.path.join(out_dir, f"sp_{seed}_{i}.jsonl")
         files.append(f)
         procs.append(subprocess.Popen(["node", os.path.join(ROOT, "tools", "az_selfplay.js"), model_path, str(k),
-                                       str(seed * 1000 + i + 1), str(sims), f], stdout=subprocess.PIPE))
+                                       str(seed * 1000 + i + 1), str(sims), f] + ([league] if league else []),
+                                      stdout=subprocess.PIPE))
     for p in procs:
         p.communicate()
         if p.returncode:
@@ -76,7 +77,7 @@ def evaluate(model_path, specs, games=400):
 
 
 def train(iters=8, games=600, sims=48, workers=6, out="runs/az", start=None, epochs=3, lr=3e-4, window=3,
-          value_weight=1.0, seed=1):
+          value_weight=1.0, seed=1, league=None):
     import torch
     import torch.nn as nn
 
@@ -103,7 +104,7 @@ def train(iters=8, games=600, sims=48, workers=6, out="runs/az", start=None, epo
     log = open(os.path.join(out, "log.jsonl"), "a")
     t0 = time.time()
     for it in range(1, iters + 1):
-        files = selfplay(cur, games, sims, workers, out, seed * 100 + it)
+        files = selfplay(cur, games, sims, workers, out, seed * 100 + it, league)
         X, PI, GX, Z = load_samples(files)
         for f in files:
             os.remove(f)
@@ -158,5 +159,9 @@ if __name__ == "__main__":
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--out", default="runs/az")
     ap.add_argument("--start", default=None)
+    ap.add_argument("--league", default=None, help="agentes de la liga, separados por comas (p. ej. estratega,afinado)")
+    ap.add_argument("--window", type=int, default=3)
+    ap.add_argument("--seed", type=int, default=1)
     a = ap.parse_args()
-    train(iters=a.iters, games=a.games, sims=a.sims, workers=a.workers, lr=a.lr, out=a.out, start=a.start)
+    train(iters=a.iters, games=a.games, sims=a.sims, workers=a.workers, lr=a.lr, out=a.out, start=a.start,
+          league=a.league, window=a.window, seed=a.seed)

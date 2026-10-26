@@ -272,5 +272,25 @@
     "desc": "Búsqueda estilo AlphaZero con 48 simulaciones por decisión: la red da los priors y valúa las hojas; las manos ajenas se reparten al azar en cada simulación."
    }
   ]
+ },
+ {
+  "id": "alphazero_estratega",
+  "file": "alphazero_estratega.json",
+  "kind": "red",
+  "label": "AlphaZero desde el Estratega",
+  "family": "rl",
+  "desc": "Red AlphaZero que arranca imitando al Estratega (coincide con él en el 81% de las decisiones, como AlphaGo con las partidas humanas) y después mejora con 8 iteraciones de búsqueda PUCT de 96 simulaciones, 3.200 partidas en una liga contra Estratega, Afinado y PPO.",
+  "variants": [
+   {
+    "spec": "az:alphazero_estratega:48",
+    "label": "AlphaZero desde el Estratega + búsqueda (48)",
+    "desc": "La red AlphaZero que arrancó imitando al Estratega, con 48 simulaciones por decisión: la red da los priors y valúa las hojas; las manos ajenas se reparten al azar en cada simulación."
+   },
+   {
+    "spec": "az:alphazero_estratega:96",
+    "label": "AlphaZero desde el Estratega + búsqueda (96)",
+    "desc": "La red AlphaZero que arrancó imitando al Estratega, con 96 simulaciones por decisión: la red da los priors y valúa las hojas; las manos ajenas se reparten al azar en cada simulación."
+   }
+  ]
  }
 ]
